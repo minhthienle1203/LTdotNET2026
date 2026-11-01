@@ -434,25 +434,6 @@ Sơ đồ thể hiện các điểm điều hướng chính, không phải sơ �
 
 ### 6.6. F06 – Danh mục dịch vụ
 
-Dữ liệu dịch vụ gồm: mã dịch vụ, tên, nhóm dịch vụ, đơn vị tính, đơn giá, trạng thái hoạt động và mô tả.
-
-
-Nhóm dịch vụ dự kiến:
-
-
-
-Đồ uống.
-
-Giặt ủi.
-
-Thuê xe.
-
-Khác.
-
-
-Nhân viên được thêm, sửa, ngừng cung cấp dịch vụ. Không xóa cứng dịch vụ đã xuất hiện trong lịch sử sử dụng.
-
-
 
 
 ### 6.7. F07 – Ghi nhận dịch vụ phát sinh
