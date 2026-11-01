@@ -457,13 +457,155 @@ Nhân viên được thêm, sửa, ngừng cung cấp dịch vụ. Không xóa c
 
 ### 6.7. F07 – Ghi nhận dịch vụ phát sinh
 
+Luồng chính:
+
+
+
+Lễ tân chọn phòng đang OCCUPIED hoặc lượt lưu trú IN_PROGRESS.
+
+Chọn dịch vụ từ danh mục.
+
+Nhập số lượng và xác nhận đơn giá.
+
+Hệ thống ghi thời điểm sử dụng, số lượng, đơn giá tại thời điểm ghi nhận và thành tiền.
+
+Tổng tiền dịch vụ của lượt lưu trú được cập nhật khi xem chi tiết hoặc tính checkout.
+
+
+Quy tắc:
+
+
+
+Chỉ ghi dịch vụ cho lượt lưu trú đang mở.
+
+Số lượng phải lớn hơn 0.
+
+Đơn giá tại thời điểm ghi nhận được lưu riêng, không thay đổi khi giá trong danh mục thay đổi.
+
+Thành tiền = số lượng × đơn giá tại thời điểm ghi nhận.
+
+Không cho phép thêm dịch vụ sau khi Stay đã COMPLETED.
+
+Dịch vụ thuê xe/giặt ủi chỉ là khoản phí do nhân viên ghi nhận; không gọi hệ thống của đối tác.
+
+
+
 
 
 ### 6.8. F08 – Check-out / Trả phòng và tính tiền
 
+Dữ liệu tính tiền:
+
+
+
+Thời điểm check-in thực tế.
+
+Thời điểm check-out thực tế.
+
+Giá giờ và giá ngày đã chụp tại thời điểm check-in.
+
+Cách tính tiền được lễ tân chọn: theo giờ hoặc theo ngày.
+
+Tổng tiền dịch vụ.
+
+Tiền cọc thực tế đã nhận.
+
+
+Công thức đề xuất để thống nhất cho đồ án:
+
+
+Gọi H là tổng số giờ lưu trú thực tế, làm tròn lên đến giờ nguyên gần nhất.
+
+
+
+Nếu chọn theo giờ: RoomCharge = max(1, ceil(H)) × HourlyRateAtCheckIn.
+
+Nếu chọn theo ngày: RoomCharge = max(1, ceil(H / 24)) × DailyRateAtCheckIn.
+
+ServiceCharge = tổng Amount của các StayService.
+
+SubTotal = RoomCharge + ServiceCharge.
+
+DepositDeducted = min(DepositAmount, SubTotal).
+
+AmountDue = max(0, SubTotal - DepositAmount).
+
+RefundDue = max(0, DepositAmount - SubTotal).
+
+
+
+Quy tắc trên là quy tắc tính đơn giản cho đồ án, chưa áp dụng giờ nhận/trả phòng chuẩn khách sạn, phụ thu quá giờ, miễn phí vài phút, khuyến mãi hoặc thuế. Nếu giảng viên có quy tắc khác, cập nhật công thức tại đây và trong CheckOutService.
+
+
+
+Luồng chính:
+
+
+
+Chọn phòng đang có khách.
+
+Hệ thống tìm Stay IN_PROGRESS tương ứng.
+
+Ghi nhận thời điểm check-out thực tế.
+
+Lễ tân chọn tính theo giờ hoặc theo ngày.
+
+Hệ thống tính tiền phòng, tiền dịch vụ, tiền cọc được trừ, số tiền phải thu hoặc hoàn lại.
+
+Hiển thị bảng tổng hợp để lễ tân kiểm tra.
+
+Lễ tân bấm Thanh toán. Ứng dụng mô phỏng thanh toán thành công ngay, không gọi cổng thanh toán; đồng thời lưu Invoice và Payment trong CSDL. Stay chuyển sang CHECKOUT_PENDING để khóa việc ghi thêm dịch vụ trong lúc chờ hoàn tất.
+
+Lễ tân bấm In hóa đơn. Ứng dụng hiển thị thông báo hoàn thành và lưu thời điểm thao tác in mô phỏng.
+
+Sau khi thao tác in mô phỏng thành công, hệ thống chuyển Stay sang COMPLETED, Reservation (nếu có) sang COMPLETED, Room sang CLEANING. Nếu ứng dụng bị đóng sau thanh toán nhưng trước khi in, hóa đơn vẫn được lưu; người dùng có thể mở lại hóa đơn để tiếp tục thao tác in và hoàn tất trả phòng.
+
+Khi nhân viên dọn xong, thao tác Hoàn tất dọn phòng chuyển Room sang AVAILABLE, hoặc RESERVED nếu phòng đã được gán cho một đặt phòng khác còn hiệu lực.
+
+
+Quy tắc:
+
+
+
+Thời điểm check-out phải lớn hơn thời điểm check-in.
+
+Không cho phép trả phòng hai lần cho cùng một Stay.
+
+Hóa đơn chỉ được tạo một lần cho một Stay.
+
+Cần dùng SQL transaction cho từng bước: (1) tạo hóa đơn + ghi thanh toán + chuyển Stay sang CHECKOUT_PENDING; (2) sau khi in mô phỏng, cập nhật PrintedAt + chuyển Stay/Reservation/Room sang trạng thái hoàn tất tương ứng.
+
+Nút thanh toán chỉ mô phỏng giao dịch nội bộ, không đại diện cho một giao dịch ngân hàng thực tế.
+
+Nút in không yêu cầu máy in và không phát sinh kết nối mạng; chỉ hiển thị thông báo thành công theo yêu cầu.
+
+
 
 
 ### 6.9. F09 – Hóa đơn
+
+Thông tin tối thiểu trên hóa đơn:
+
+
+
+Mã hóa đơn, ngày lập, mã phòng, thông tin khách.
+
+Thời điểm nhận phòng và trả phòng.
+
+Cách tính tiền, số giờ/ngày và tiền phòng.
+
+Danh sách dịch vụ, số lượng, đơn giá và thành tiền.
+
+Tổng tiền phòng, tổng tiền dịch vụ, tiền cọc được trừ.
+
+Số tiền cần thu thêm hoặc số tiền cần hoàn lại.
+
+Trạng thái thanh toán và trạng thái in mô phỏng.
+
+
+Hóa đơn đã thanh toán không được sửa trực tiếp. Nếu nhập sai dữ liệu trước khi hoàn tất, quay lại màn hình tính checkout để điều chỉnh trước khi xác nhận thanh toán.
+
+
 
 
 
@@ -476,7 +618,21 @@ Nhân viên được thêm, sửa, ngừng cung cấp dịch vụ. Không xóa c
 
 ### 6.11. F11 – Báo cáo tháng
 
+Báo cáo có bộ lọc tháng/năm và tối thiểu ba chỉ số:
 
+
+
+Công suất phòng (%): đề xuất tính bằng Tổng số giờ phòng có khách trong tháng / (Số phòng đang kinh doanh × Tổng số giờ trong tháng) × 100. Thời gian Stay giao với tháng báo cáo chỉ tính phần giao nhau; tính cả Stay IN_PROGRESS, CHECKOUT_PENDING và COMPLETED có khoảng lưu trú giao với tháng. Cách tính giờ giúp xử lý cả lưu trú ngắn theo giờ.
+
+Doanh thu phòng: tổng RoomCharge của các hóa đơn đã thanh toán và đã hoàn tất thao tác in mô phỏng trong tháng (Invoice.Status = PAID, PrintedAt khác null).
+
+Doanh thu dịch vụ: tổng ServiceCharge của các hóa đơn đã thanh toán và đã hoàn tất thao tác in mô phỏng trong tháng.
+
+
+Quy ước: tháng báo cáo dựa trên ngày tạo/hoàn tất hóa đơn; công suất dựa trên thời gian Stay thực tế giao với tháng được chọn. Tiền cọc là khoản thanh toán trước, không phải khoản giảm doanh thu; chỉ được trừ khi tính số tiền cần thu tại checkout.
+
+
+Giao diện nên có thẻ tổng số, bảng tổng hợp; biểu đồ cột hoặc đường là phần trình bày bổ sung, không thay thế số liệu.
 
 ## 7. Quy tắc trạng thái nghiệp vụ
 
