@@ -427,8 +427,6 @@ Dữ liệu dịch vụ gồm: mã dịch vụ, tên, nhóm dịch vụ, đơn v
 
 Nhóm dịch vụ dự kiến:
 
-
-
 Đồ uống.
 
 Giặt ủi.
@@ -447,8 +445,6 @@ Nhân viên được thêm, sửa, ngừng cung cấp dịch vụ. Không xóa c
 
 Luồng chính:
 
-
-
 Lễ tân chọn phòng đang OCCUPIED hoặc lượt lưu trú IN_PROGRESS.
 
 Chọn dịch vụ từ danh mục.
@@ -461,8 +457,6 @@ Tổng tiền dịch vụ của lượt lưu trú được cập nhật khi xem 
 
 
 Quy tắc:
-
-
 
 Chỉ ghi dịch vụ cho lượt lưu trú đang mở.
 
@@ -482,8 +476,6 @@ Dịch vụ thuê xe/giặt ủi chỉ là khoản phí do nhân viên ghi nhậ
 ### 6.8. F08 – Check-out / Trả phòng và tính tiền
 
 Dữ liệu tính tiền:
-
-
 
 Thời điểm check-in thực tế.
 
@@ -552,8 +544,6 @@ Khi nhân viên dọn xong, thao tác Hoàn tất dọn phòng chuyển Room san
 
 Quy tắc:
 
-
-
 Thời điểm check-out phải lớn hơn thời điểm check-in.
 
 Không cho phép trả phòng hai lần cho cùng một Stay.
@@ -571,8 +561,6 @@ Nút in không yêu cầu máy in và không phát sinh kết nối mạng; ch�
 ### 6.9. F09 – Hóa đơn
 
 Thông tin tối thiểu trên hóa đơn:
-
-
 
 Mã hóa đơn, ngày lập, mã phòng, thông tin khách.
 
