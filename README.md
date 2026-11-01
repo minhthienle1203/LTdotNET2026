@@ -358,11 +358,40 @@ Sơ đồ thể hiện các điểm điều hướng chính, không phải sơ �
 
 
 ### 6.3. F03 – Quản lý khách hàng
+**Thông tin lưu:** họ tên, loại giấy tờ (`CCCD` hoặc `PASSPORT`), số giấy tờ, số điện thoại, email (không bắt buộc), địa chỉ (không bắt buộc), ngày tạo.
 
+**Luồng chính:**
 
+1. Lễ tân tìm khách theo số giấy tờ, số điện thoại hoặc tên.
+2. Nếu đã tồn tại, chọn hồ sơ có sẵn và kiểm tra lại thông tin.
+3. Nếu chưa tồn tại, tạo hồ sơ mới.
+4. Lưu khách để liên kết với đặt phòng hoặc lượt lưu trú.
+
+**Lưu ý:** đây là thao tác do nhân viên nhập. Không có màn hình để khách tự đăng ký hoặc tự cập nhật hồ sơ.
 
 ### 6.4. F04 – Đặt phòng trước
+**Thông tin bắt buộc:** khách hàng, ngày/giờ dự kiến đến, ngày/giờ dự kiến đi, loại phòng.  
+**Thông tin tùy chọn:** phòng cụ thể (nếu lễ tân muốn giữ một phòng), số tiền đặt cọc đã nhận, ghi chú.
 
+**Luồng chính:**
+
+1. Lễ tân tìm hoặc tạo hồ sơ khách.
+2. Nhập ngày giờ dự kiến đến và đi.
+3. Chọn loại phòng.
+4. Hệ thống kiểm tra số phòng phù hợp còn khả dụng trong khoảng thời gian đó.
+5. Có thể chỉ lưu yêu cầu theo loại phòng, hoặc gán trước một phòng cụ thể cùng loại.
+6. Nhập tiền cọc thực tế đã nhận (có thể bằng 0).
+7. Lưu đặt phòng với trạng thái `CONFIRMED`.
+8. Nếu gán phòng cụ thể, phòng chuyển `AVAILABLE` → `RESERVED`.
+
+**Quy tắc:**
+
+- Thời điểm dự kiến đi phải lớn hơn thời điểm dự kiến đến.
+- Phòng được gán phải thuộc đúng loại phòng đã chọn.
+- Không cho phép hai đặt phòng còn hiệu lực gán cùng một phòng trong khoảng thời gian giao nhau.
+- Đặt phòng chưa gán phòng vẫn phải được tính vào số chỗ đã giữ của loại phòng. Số phòng còn khả dụng = số phòng đang kinh doanh của loại đó trừ số phòng đã bị chiếm/được gán trong khoảng thời gian và trừ số đặt phòng cùng loại chưa gán phòng còn hiệu lực trong khoảng thời gian. Không đếm trùng một phòng đã có Stay và Reservation tương ứng.
+- Khi hủy đặt phòng, trạng thái chuyển `CANCELLED`; nếu đã gán phòng thì tính lại trạng thái phòng: ưu tiên `OCCUPIED`, sau đó `CLEANING`, sau đó `RESERVED` nếu vẫn còn đặt phòng được gán có hiệu lực, còn lại `AVAILABLE`.
+- Không sửa đặt phòng đã chuyển thành `CHECKED_IN` hoặc `COMPLETED`; nếu cần thay đổi phải thực hiện nghiệp vụ điều chỉnh riêng (không bắt buộc trong MVP).
 
 
 ### 6.5. F05 – Check-in / Nhận phòng
