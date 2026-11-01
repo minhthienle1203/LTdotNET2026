@@ -324,7 +324,34 @@ Sơ đồ thể hiện các điểm điều hướng chính, không phải sơ �
 
 ### 6.1. F01 – Sơ đồ phòng theo tầng
 
+**Mục đích:** cho lễ tân quan sát nhanh tình trạng sử dụng phòng trong khách sạn.
 
+**Luồng chính:**
+
+1. Mở màn hình Tổng quan.
+2. Hệ thống tải danh sách tầng đang hoạt động.
+3. Người dùng chọn tầng.
+4. Hệ thống hiển thị các phòng thuộc tầng đó dưới dạng thẻ hoặc ô lưới.
+5. Mỗi ô hiển thị tối thiểu: mã phòng, loại phòng, giá cơ bản và trạng thái.
+6. Người dùng chọn một phòng để xem chi tiết và mở nghiệp vụ phù hợp.
+
+**Màu trạng thái theo yêu cầu:**
+
+| Trạng thái | Màu | Ý nghĩa |
+|---|---|---|
+| `AVAILABLE` – Phòng trống | Xanh lá | Có thể nhận khách nếu không bị vướng đặt phòng trong khoảng thời gian cần nhận. |
+| `OCCUPIED` – Đang có khách | Đỏ | Có một lượt lưu trú chưa check-out. |
+| `CLEANING` – Đang dọn dẹp | Vàng | Đã trả phòng nhưng nhân viên chưa xác nhận dọn xong. Không được check-in. |
+| `RESERVED` – Đã đặt trước | Cam | Phòng cụ thể đã được gán cho một đặt phòng còn hiệu lực. |
+
+**Quy tắc:**
+
+- Phòng `OCCUPIED` không được gán cho đặt phòng khác có khoảng thời gian trùng.
+- Phòng `CLEANING` không được nhận khách.
+- Phòng `RESERVED` chỉ được nhận khách của đặt phòng tương ứng; lễ tân có thể đổi sang phòng khác cùng loại nếu phòng mới hợp lệ.
+- Khi hoàn tất dọn phòng, tính lại trạng thái: chuyển `CLEANING` → `RESERVED` nếu vẫn còn đặt phòng được gán có hiệu lực, nếu không thì → `AVAILABLE`.
+- Nếu đặt phòng bị hủy, chỉ giải phóng phòng về `AVAILABLE` khi không còn đặt phòng được gán nào khác; nếu còn thì giữ `RESERVED`.
+- Trạng thái `RESERVED` chỉ áp dụng khi đặt phòng đã được gán `RoomId` cụ thể. Đặt phòng chỉ giữ chỗ theo loại phòng vẫn hiển thị trong danh sách đặt phòng, không tự ý tô cam một phòng bất kỳ.
 
 ### 6.2. F02 – Quản lý tầng, loại phòng và phòng
 
