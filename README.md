@@ -395,6 +395,28 @@ Sơ đồ thể hiện các điểm điều hướng chính, không phải sơ �
 
 
 ### 6.5. F05 – Check-in / Nhận phòng
+**Hai trường hợp:**
+
+- **Khách có đặt trước:** chọn đặt phòng đến hạn, kiểm tra khách và ngày dự kiến, chọn phòng đã giữ hoặc phòng trống cùng loại.
+- **Khách vãng lai:** tìm/tạo khách, chọn loại phòng và một phòng `AVAILABLE`, không có đặt phòng xung đột trong khoảng thời gian dự kiến.
+
+**Luồng chính:**
+
+1. Chọn đặt phòng hoặc tạo lượt nhận phòng vãng lai.
+2. Xác nhận họ tên và loại/số CCCD hoặc hộ chiếu.
+3. Nhập số lượng khách thực tế.
+4. Chọn phòng hợp lệ.
+5. Hệ thống lưu thời điểm check-in thực tế và giá giờ/ngày tại thời điểm nhận phòng.
+6. Tạo `Stay` ở trạng thái `IN_PROGRESS`.
+7. Cập nhật phòng thành `OCCUPIED`; đặt phòng (nếu có) thành `CHECKED_IN`.
+
+**Quy tắc:**
+
+- Không nhận phòng `OCCUPIED` hoặc `CLEANING`.
+- Phòng `RESERVED` chỉ được nhận nếu khớp đặt phòng; trường hợp đổi phòng phải kiểm tra cùng loại và giải phóng phòng cũ.
+- Số khách không vượt quá sức chứa của loại phòng.
+- Một phòng không được có hai `Stay` cùng trạng thái `IN_PROGRESS`.
+- Các bước tạo Stay và cập nhật Room/Reservation phải nằm trong cùng một SQL transaction.
 
 
 
@@ -562,7 +584,7 @@ Phân công theo đúng 20 màn hình đã đánh mã ở mục 5.2. Mỗi thàn
 | Thành viên | Màn hình phụ trách | Module / nghiệp vụ | Phần code chính | Khối lượng ước lượng |
 |---|---|---|---|---:|
 | **Thành viên 1** - [Tên người phụ trách]| **S01–S06, S19** (7 màn hình) | Tổng quan/sơ đồ phòng; quản lý tầng; danh sách và biểu mẫu loại phòng; danh sách và biểu mẫu phòng; dọn phòng. | `Forms/Dashboard`, `Forms/Floors`, `Forms/RoomTypes`, `Forms/Rooms`, `Forms/Housekeeping`; `RoomService`, `FloorService`, `RoomTypeService`; `RoomRepository`, `FloorRepository`, `RoomTypeRepository`. Đồng thời khởi tạo solution, cấu hình kết nối và nền tảng database, điều phối tích hợp. | **34%** (F01, F02, F10)|
-| **Thành viên 2** - [Tên người phụ trách]| **S07–S12** (6 màn hình) | Danh sách/biểu mẫu khách hàng; danh sách/biểu mẫu đặt phòng; check-in; danh sách lưu trú đang diễn ra. | `Forms/Customers`, `Forms/Reservations`, `Forms/CheckIn`; `CustomerService`, `ReservationService`, `CheckInService`; `CustomerRepository`, `ReservationRepository`, `StayRepository` (phần tạo và truy vấn lượt lưu trú). | **33%** (F03, F04, F05)|
+| **Thành viên 2** - [Bùi Hữu Trí]| **S07–S12** (6 màn hình) | Danh sách/biểu mẫu khách hàng; danh sách/biểu mẫu đặt phòng; check-in; danh sách lưu trú đang diễn ra. | `Forms/Customers`, `Forms/Reservations`, `Forms/CheckIn`; `CustomerService`, `ReservationService`, `CheckInService`; `CustomerRepository`, `ReservationRepository`, `StayRepository` (phần tạo và truy vấn lượt lưu trú). | **33%** (F03, F04, F05)|
 | **Thành viên 3** - [Tên người phụ trách]| **S13–S18, S20** (7 màn hình) | Danh mục và biểu mẫu dịch vụ; ghi nhận dịch vụ; check-out/thanh toán; danh sách/chi tiết hóa đơn; báo cáo tháng. | `Forms/Services`, `Forms/CheckOut`, `Forms/Invoices`, `Forms/Reports`; `ServiceCatalogService`, `ServiceUsageService`, `CheckOutService`, `InvoiceService`, `ReportService`; `ServiceRepository`, `StayServiceRepository`, `InvoiceRepository`, `PaymentRepository`, `ReportRepository`. | **33%** (F06, F07, F08, F09, F11)|
 
 **Lý do phân chia:**
