@@ -355,21 +355,103 @@ Sơ đồ thể hiện các điểm điều hướng chính, không phải sơ �
 
 ### 6.2. F02 – Quản lý tầng, loại phòng và phòng
 
+**Dữ liệu tầng:** mã tầng, số tầng, tên hiển thị, thứ tự sắp xếp, trạng thái hoạt động.
 
+**Dữ liệu loại phòng:** mã loại, tên loại, mô tả, sức chứa tối đa, giá theo giờ, giá theo ngày, trạng thái hoạt động.
+
+**Dữ liệu phòng:** mã phòng, tầng, loại phòng, trạng thái hiện tại, ghi chú, trạng thái hoạt động.
+
+**Thao tác:**
+
+- Thêm, sửa thông tin phòng và loại phòng.
+- Ngừng sử dụng thay vì xóa cứng nếu bản ghi đã phát sinh đặt phòng/lưu trú.
+- Khi đổi loại phòng, không được vi phạm dữ liệu đặt phòng đang còn hiệu lực.
+- Không cho phép trùng mã phòng trong toàn khách sạn.
+- Chỉ phòng đang `AVAILABLE` mới được chuyển thủ công sang trạng thái `CLEANING` trong trường hợp bảo trì/dọn bổ sung; không cho phép chỉnh tay sang `OCCUPIED` hoặc `RESERVED`. Hai trạng thái này phải được cập nhật qua nghiệp vụ đặt phòng/check-in.
 
 ### 6.3. F03 – Quản lý khách hàng
+**Thông tin lưu:** họ tên, loại giấy tờ (`CCCD` hoặc `PASSPORT`), số giấy tờ, số điện thoại, email (không bắt buộc), địa chỉ (không bắt buộc), ngày tạo.
 
+**Luồng chính:**
 
+1. Lễ tân tìm khách theo số giấy tờ, số điện thoại hoặc tên.
+2. Nếu đã tồn tại, chọn hồ sơ có sẵn và kiểm tra lại thông tin.
+3. Nếu chưa tồn tại, tạo hồ sơ mới.
+4. Lưu khách để liên kết với đặt phòng hoặc lượt lưu trú.
+
+**Lưu ý:** đây là thao tác do nhân viên nhập. Không có màn hình để khách tự đăng ký hoặc tự cập nhật hồ sơ.
 
 ### 6.4. F04 – Đặt phòng trước
+**Thông tin bắt buộc:** khách hàng, ngày/giờ dự kiến đến, ngày/giờ dự kiến đi, loại phòng.  
+**Thông tin tùy chọn:** phòng cụ thể (nếu lễ tân muốn giữ một phòng), số tiền đặt cọc đã nhận, ghi chú.
 
+**Luồng chính:**
+
+1. Lễ tân tìm hoặc tạo hồ sơ khách.
+2. Nhập ngày giờ dự kiến đến và đi.
+3. Chọn loại phòng.
+4. Hệ thống kiểm tra số phòng phù hợp còn khả dụng trong khoảng thời gian đó.
+5. Có thể chỉ lưu yêu cầu theo loại phòng, hoặc gán trước một phòng cụ thể cùng loại.
+6. Nhập tiền cọc thực tế đã nhận (có thể bằng 0).
+7. Lưu đặt phòng với trạng thái `CONFIRMED`.
+8. Nếu gán phòng cụ thể, phòng chuyển `AVAILABLE` → `RESERVED`.
+
+**Quy tắc:**
+
+- Thời điểm dự kiến đi phải lớn hơn thời điểm dự kiến đến.
+- Phòng được gán phải thuộc đúng loại phòng đã chọn.
+- Không cho phép hai đặt phòng còn hiệu lực gán cùng một phòng trong khoảng thời gian giao nhau.
+- Đặt phòng chưa gán phòng vẫn phải được tính vào số chỗ đã giữ của loại phòng. Số phòng còn khả dụng = số phòng đang kinh doanh của loại đó trừ số phòng đã bị chiếm/được gán trong khoảng thời gian và trừ số đặt phòng cùng loại chưa gán phòng còn hiệu lực trong khoảng thời gian. Không đếm trùng một phòng đã có Stay và Reservation tương ứng.
+- Khi hủy đặt phòng, trạng thái chuyển `CANCELLED`; nếu đã gán phòng thì tính lại trạng thái phòng: ưu tiên `OCCUPIED`, sau đó `CLEANING`, sau đó `RESERVED` nếu vẫn còn đặt phòng được gán có hiệu lực, còn lại `AVAILABLE`.
+- Không sửa đặt phòng đã chuyển thành `CHECKED_IN` hoặc `COMPLETED`; nếu cần thay đổi phải thực hiện nghiệp vụ điều chỉnh riêng (không bắt buộc trong MVP).
 
 
 ### 6.5. F05 – Check-in / Nhận phòng
+**Hai trường hợp:**
+
+- **Khách có đặt trước:** chọn đặt phòng đến hạn, kiểm tra khách và ngày dự kiến, chọn phòng đã giữ hoặc phòng trống cùng loại.
+- **Khách vãng lai:** tìm/tạo khách, chọn loại phòng và một phòng `AVAILABLE`, không có đặt phòng xung đột trong khoảng thời gian dự kiến.
+
+**Luồng chính:**
+
+1. Chọn đặt phòng hoặc tạo lượt nhận phòng vãng lai.
+2. Xác nhận họ tên và loại/số CCCD hoặc hộ chiếu.
+3. Nhập số lượng khách thực tế.
+4. Chọn phòng hợp lệ.
+5. Hệ thống lưu thời điểm check-in thực tế và giá giờ/ngày tại thời điểm nhận phòng.
+6. Tạo `Stay` ở trạng thái `IN_PROGRESS`.
+7. Cập nhật phòng thành `OCCUPIED`; đặt phòng (nếu có) thành `CHECKED_IN`.
+
+**Quy tắc:**
+
+- Không nhận phòng `OCCUPIED` hoặc `CLEANING`.
+- Phòng `RESERVED` chỉ được nhận nếu khớp đặt phòng; trường hợp đổi phòng phải kiểm tra cùng loại và giải phóng phòng cũ.
+- Số khách không vượt quá sức chứa của loại phòng.
+- Một phòng không được có hai `Stay` cùng trạng thái `IN_PROGRESS`.
+- Các bước tạo Stay và cập nhật Room/Reservation phải nằm trong cùng một SQL transaction.
 
 
 
 ### 6.6. F06 – Danh mục dịch vụ
+
+Dữ liệu dịch vụ gồm: mã dịch vụ, tên, nhóm dịch vụ, đơn vị tính, đơn giá, trạng thái hoạt động và mô tả.
+
+
+Nhóm dịch vụ dự kiến:
+
+
+
+Đồ uống.
+
+Giặt ủi.
+
+Thuê xe.
+
+Khác.
+
+
+Nhân viên được thêm, sửa, ngừng cung cấp dịch vụ. Không xóa cứng dịch vụ đã xuất hiện trong lịch sử sử dụng.
+
 
 
 
@@ -387,7 +469,10 @@ Sơ đồ thể hiện các điểm điều hướng chính, không phải sơ �
 
 ### 6.10. F10 – Dọn phòng
 
-
+- Danh sách phòng `CLEANING` được hiển thị riêng hoặc lọc trên sơ đồ phòng.
+- Nhân viên chọn phòng, kiểm tra và bấm **Hoàn tất dọn phòng**.
+- Hệ thống cập nhật trạng thái `AVAILABLE`.
+- Không yêu cầu quản lý checklist vệ sinh, người dọn, vật tư hoặc thời gian làm vệ sinh trong MVP.
 
 ### 6.11. F11 – Báo cáo tháng
 
@@ -533,7 +618,7 @@ Phân công theo đúng 20 màn hình đã đánh mã ở mục 5.2. Mỗi thàn
 | Thành viên | Màn hình phụ trách | Module / nghiệp vụ | Phần code chính | Khối lượng ước lượng |
 |---|---|---|---|---:|
 | **Thành viên 1** - [Tên người phụ trách]| **S01–S06, S19** (7 màn hình) | Tổng quan/sơ đồ phòng; quản lý tầng; danh sách và biểu mẫu loại phòng; danh sách và biểu mẫu phòng; dọn phòng. | `Forms/Dashboard`, `Forms/Floors`, `Forms/RoomTypes`, `Forms/Rooms`, `Forms/Housekeeping`; `RoomService`, `FloorService`, `RoomTypeService`; `RoomRepository`, `FloorRepository`, `RoomTypeRepository`. Đồng thời khởi tạo solution, cấu hình kết nối và nền tảng database, điều phối tích hợp. | **34%** (F01, F02, F10)|
-| **Thành viên 2** - [Tên người phụ trách]| **S07–S12** (6 màn hình) | Danh sách/biểu mẫu khách hàng; danh sách/biểu mẫu đặt phòng; check-in; danh sách lưu trú đang diễn ra. | `Forms/Customers`, `Forms/Reservations`, `Forms/CheckIn`; `CustomerService`, `ReservationService`, `CheckInService`; `CustomerRepository`, `ReservationRepository`, `StayRepository` (phần tạo và truy vấn lượt lưu trú). | **33%** (F03, F04, F05)|
+| **Thành viên 2** - [Bùi Hữu Trí]| **S07–S12** (6 màn hình) | Danh sách/biểu mẫu khách hàng; danh sách/biểu mẫu đặt phòng; check-in; danh sách lưu trú đang diễn ra. | `Forms/Customers`, `Forms/Reservations`, `Forms/CheckIn`; `CustomerService`, `ReservationService`, `CheckInService`; `CustomerRepository`, `ReservationRepository`, `StayRepository` (phần tạo và truy vấn lượt lưu trú). | **33%** (F03, F04, F05)|
 | **Thành viên 3** - [Tên người phụ trách]| **S13–S18, S20** (7 màn hình) | Danh mục và biểu mẫu dịch vụ; ghi nhận dịch vụ; check-out/thanh toán; danh sách/chi tiết hóa đơn; báo cáo tháng. | `Forms/Services`, `Forms/CheckOut`, `Forms/Invoices`, `Forms/Reports`; `ServiceCatalogService`, `ServiceUsageService`, `CheckOutService`, `InvoiceService`, `ReportService`; `ServiceRepository`, `StayServiceRepository`, `InvoiceRepository`, `PaymentRepository`, `ReportRepository`. | **33%** (F06, F07, F08, F09, F11)|
 
 **Lý do phân chia:**
