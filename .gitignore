@@ -1,0 +1,38 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+
+# IDE / user-specific files
+.idea/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Test results
+[Tt]est[Rr]esult*/
+coverage/
+
+# Runtime database files (do not commit real/local data)
+*.mdf
+*.ldf
+*.ndf
+*.db
+*.sqlite
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+
+# Publish / installer output
+publish/
+setup-output/
+
+# Inno Setup output
+installer/Output/
+installer/output/

@@ -355,7 +355,19 @@ Sơ đồ thể hiện các điểm điều hướng chính, không phải sơ �
 
 ### 6.2. F02 – Quản lý tầng, loại phòng và phòng
 
+**Dữ liệu tầng:** mã tầng, số tầng, tên hiển thị, thứ tự sắp xếp, trạng thái hoạt động.
 
+**Dữ liệu loại phòng:** mã loại, tên loại, mô tả, sức chứa tối đa, giá theo giờ, giá theo ngày, trạng thái hoạt động.
+
+**Dữ liệu phòng:** mã phòng, tầng, loại phòng, trạng thái hiện tại, ghi chú, trạng thái hoạt động.
+
+**Thao tác:**
+
+- Thêm, sửa thông tin phòng và loại phòng.
+- Ngừng sử dụng thay vì xóa cứng nếu bản ghi đã phát sinh đặt phòng/lưu trú.
+- Khi đổi loại phòng, không được vi phạm dữ liệu đặt phòng đang còn hiệu lực.
+- Không cho phép trùng mã phòng trong toàn khách sạn.
+- Chỉ phòng đang `AVAILABLE` mới được chuyển thủ công sang trạng thái `CLEANING` trong trường hợp bảo trì/dọn bổ sung; không cho phép chỉnh tay sang `OCCUPIED` hoặc `RESERVED`. Hai trạng thái này phải được cập nhật qua nghiệp vụ đặt phòng/check-in.
 
 ### 6.3. F03 – Quản lý khách hàng
 **Thông tin lưu:** họ tên, loại giấy tờ (`CCCD` hoặc `PASSPORT`), số giấy tờ, số điện thoại, email (không bắt buộc), địa chỉ (không bắt buộc), ngày tạo.
@@ -457,7 +469,10 @@ Nhân viên được thêm, sửa, ngừng cung cấp dịch vụ. Không xóa c
 
 ### 6.10. F10 – Dọn phòng
 
-
+- Danh sách phòng `CLEANING` được hiển thị riêng hoặc lọc trên sơ đồ phòng.
+- Nhân viên chọn phòng, kiểm tra và bấm **Hoàn tất dọn phòng**.
+- Hệ thống cập nhật trạng thái `AVAILABLE`.
+- Không yêu cầu quản lý checklist vệ sinh, người dọn, vật tư hoặc thời gian làm vệ sinh trong MVP.
 
 ### 6.11. F11 – Báo cáo tháng
 
