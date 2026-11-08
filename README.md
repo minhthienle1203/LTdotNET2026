@@ -71,8 +71,11 @@ Hệ thống hỗ trợ nhân viên/lễ tân quản lý danh sách phòng, theo
 | SDK | `dotnet-sdk-10.0.401` | Theo môi trường đã chọn. |
 | IDE | JetBrains Rider 2026.2.2 | Dùng tạo, thiết kế, build, debug WinForms. |
 | Giao diện | Windows Forms | Lập trình hướng sự kiện; dùng Form, UserControl, DataGridView, BindingSource, ErrorProvider, MessageBox. |
-| CSDL | Microsoft SQL Server Express LocalDB | |
-| Truy cập CSDL | ADO.NET – `Microsoft.Data.SqlClient` | Dùng `SqlConnection`, `SqlCommand`, `SqlParameter`, `SqlDataReader`, `SqlTransaction`. |
+| Hệ quản trị CSDL (DBMS) | **Microsoft SQL Server** | Sử dụng SQL Server instance được cài đặt và cấu hình riêng. Lưu trữ dữ liệu quan hệ của hệ thống. |
+| Công cụ quản trị CSDL | **Navicat (phiên bản hỗ trợ Microsoft SQL Server)** | Kết nối trực tiếp đến SQL Server để tạo/quản lý database, thiết kế bảng, quan hệ, thực thi câu lệnh SQL và kiểm tra dữ liệu. Navicat không phải Database Engine. |
+| Truy cập CSDL | **ADO.NET – `Microsoft.Data.SqlClient` 7.1.1** | Ứng dụng kết nối trực tiếp đến SQL Server thông qua `SqlConnection`, `SqlCommand`, `SqlParameter`, `SqlDataReader` và `SqlTransaction`. |
+| Mô hình dữ liệu (Entity) | C# POCO Entity | Sử dụng các class Entity đại diện cho các đối tượng/bảng dữ liệu. Repository chịu trách nhiệm ánh xạ dữ liệu từ `SqlDataReader` hoặc `DataTable` sang Entity/DTO. Không sử dụng Entity Framework Core trong phiên bản hiện tại. |
+| Tầng truy cập dữ liệu | Repository / DataAccess | Tập trung các thao tác SQL, ánh xạ dữ liệu và quản lý transaction. Form không truy vấn CSDL trực tiếp. |
 | Quản lý mã nguồn | Git + SmartGit Education | Dùng branch riêng theo chức năng, commit có nội dung rõ ràng. |
 | Cài đặt | `dotnet publish` + Inno Setup (đề xuất) | Tạo bản publish Release và đóng gói thành file cài đặt `.exe`. |
 
