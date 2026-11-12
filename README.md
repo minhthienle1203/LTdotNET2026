@@ -2,7 +2,7 @@
 
 > **Tên dự án tạm dùng:** `HotelManagement`  
 > **Loại ứng dụng:** Windows Forms Desktop Application  
-> **Mục tiêu:** Ứng dụng quản lý nội bộ khách sạn, chạy offline trên một máy Windows, lưu dữ liệu trong SQL Server cục bộ.  
+> **Mục tiêu:** Dữ liệu được lưu trong file SQLite trên máy đang chạy ứng dụng. Ứng dụng không cần Internet, không gọi API, không đồng bộ với máy chủ bên ngoài và không yêu cầu cài đặt Database Server.
 > **Quy mô giao diện:** 20 màn hình nghiệp vụ có thể điều hướng độc lập; không tính `MainForm` khung chứa, hộp thoại xác nhận hoặc thông báo nhỏ.
 
 ## 1. Tổng quan dự án
@@ -20,7 +20,7 @@ Hệ thống hỗ trợ nhân viên/lễ tân quản lý danh sách phòng, theo
 - Lưu xuyên suốt thông tin khách, đặt phòng, lượt lưu trú, dịch vụ phát sinh và hóa đơn.
 - Tự động tính tiền phòng, tiền dịch vụ, tiền cọc đã nhận và số tiền còn phải thu.
 - Có số liệu báo cáo theo tháng để đánh giá công suất và doanh thu.
-- Áp dụng nội dung đã học: C#, OOP, WinForms, Event-driven, Validation, Exception Handling, File I/O ở mức cần thiết và ADO.NET/SqlClient.
+- Áp dụng nội dung đã học: C#, OOP, WinForms, Event-driven, Validation, Exception Handling, File I/O ở mức cần thiết và ADO.NET với SQLite.
 
 ### 1.3. Người dùng và vai trò
 
@@ -57,7 +57,7 @@ Hệ thống hỗ trợ nhân viên/lễ tân quản lý danh sách phòng, theo
 - Phân quyền chi tiết theo chức vụ, chấm công hoặc quản lý tài khoản nhân viên.
 - In thực tế qua máy in ở phiên bản yêu cầu hiện tại. Nút **In hóa đơn** chỉ mô phỏng thao tác và hiển thị thông báo hoàn thành; dữ liệu hóa đơn vẫn lưu trong CSDL.
 
-> Ứng dụng không kết nối mạng trong lúc sử dụng. Máy vẫn cần có SQL Server Express LocalDB (hoặc SQL Server Express cài trên chính máy đó) để lưu dữ liệu cục bộ.
+> Ứng dụng không kết nối mạng trong lúc sử dụng. SQLite lưu dữ liệu trực tiếp trong một file trên máy Windows; người dùng cuối không cần cài SQL Server, MySQL hoặc một Database Server khác.
 
 ---
 
@@ -66,74 +66,123 @@ Hệ thống hỗ trợ nhân viên/lễ tân quản lý danh sách phòng, theo
 | Thành phần | Công nghệ / phiên bản | Ghi chú |
 |---|---|---|
 | Ngôn ngữ | C# | Dùng OOP, class, properties, enum, nullable reference types. |
-| Nền tảng | **.NET 10** | Cách gọi chính xác là .NET 10 |
-| Target Framework | `net10.0-windows` | WinForms là công nghệ giao diện chỉ dành cho Windows. |
-| SDK | `dotnet-sdk-10.0.401` | Theo môi trường đã chọn. |
+| Nền tảng | **.NET 10** | Cách gọi chính xác là .NET 10. |
+| Target Framework | `net10.0-windows` | WinForms chỉ chạy trên Windows. Các project Core và Infrastructure dùng `net10.0`. |
+| SDK | `dotnet-sdk-10.0.401` | Theo môi trường đã chọn trong `global.json`. |
 | IDE | JetBrains Rider 2026.2.2 | Dùng tạo, thiết kế, build, debug WinForms. |
 | Giao diện | Windows Forms | Lập trình hướng sự kiện; dùng Form, UserControl, DataGridView, BindingSource, ErrorProvider, MessageBox. |
-| Hệ quản trị CSDL (DBMS) | **Microsoft SQL Server** | Sử dụng SQL Server instance được cài đặt và cấu hình riêng. Lưu trữ dữ liệu quan hệ của hệ thống. |
-| Công cụ quản trị CSDL | **Navicat (phiên bản hỗ trợ Microsoft SQL Server)** | Kết nối trực tiếp đến SQL Server để tạo/quản lý database, thiết kế bảng, quan hệ, thực thi câu lệnh SQL và kiểm tra dữ liệu. Navicat không phải Database Engine. |
-| Truy cập CSDL | **ADO.NET – `Microsoft.Data.SqlClient` 7.1.1** | Ứng dụng kết nối trực tiếp đến SQL Server thông qua `SqlConnection`, `SqlCommand`, `SqlParameter`, `SqlDataReader` và `SqlTransaction`. |
-| Mô hình dữ liệu (Entity) | C# POCO Entity | Sử dụng các class Entity đại diện cho các đối tượng/bảng dữ liệu. Repository chịu trách nhiệm ánh xạ dữ liệu từ `SqlDataReader` hoặc `DataTable` sang Entity/DTO. Không sử dụng Entity Framework Core trong phiên bản hiện tại. |
-| Tầng truy cập dữ liệu | Repository / DataAccess | Tập trung các thao tác SQL, ánh xạ dữ liệu và quản lý transaction. Form không truy vấn CSDL trực tiếp. |
-| Quản lý mã nguồn | Git + SmartGit Education | Dùng branch riêng theo chức năng, commit có nội dung rõ ràng. |
+| Hệ quản trị CSDL | **SQLite** | CSDL nhúng, lưu trong file `HotelManagementDb.sqlite` trên máy cục bộ; không cần Database Server. |
+| Công cụ quản trị CSDL | Navicat Premium Lite 18 hoặc công cụ hỗ trợ SQLite | Dùng mở file SQLite, xem bảng, quan hệ, dữ liệu và chạy truy vấn kiểm tra. Công cụ quản trị không phải Database Engine. |
+| Truy cập CSDL | **ADO.NET – `Microsoft.Data.Sqlite` 10.0.15** | Dùng `SqliteConnection`, `SqliteCommand`, `SqliteParameter`, `SqliteDataReader` và `SqliteTransaction`. Package chỉ đặt trong project `HotelManagement.Infrastructure`. |
+| Mô hình dữ liệu (Entity) | C# POCO Entity | Các class trong `HotelManagement.Core/Entities`; không phụ thuộc WinForms và không chứa câu SQL. Repository ánh xạ dữ liệu SQLite sang Entity/DTO. |
+| Tầng truy cập dữ liệu | Repository / DataAccess | Tập trung SQL, ánh xạ dữ liệu và quản lý transaction. Form không truy vấn SQLite trực tiếp. |
+| Khởi tạo CSDL | `DbInitializer` + SQL Embedded Resources | Khi mở ứng dụng lần đầu, chương trình tạo file SQLite, cấu trúc bảng, index và dữ liệu mẫu nếu chưa có. |
+| Quản lý mã nguồn | Git + SmartGit Education | Dùng branch riêng theo chức năng, commit có nội dung rõ ràng. Không commit file Database runtime. |
 | Cài đặt | `dotnet publish` + Inno Setup (đề xuất) | Tạo bản publish Release và đóng gói thành file cài đặt `.exe`. |
 
 ### 3.1. Cấu hình dự án WinForms
 
-Tệp `.csproj` cần có cấu hình tương đương:
+Tệp `.csproj` cần có cấu hình tương đương `HotelManagement.WinForms.csproj`:
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <UseWindowsForms>true</UseWindowsForms>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\HotelManagement.Core\HotelManagement.Core.csproj" />
+        <ProjectReference Include="..\HotelManagement.Infrastructure\HotelManagement.Infrastructure.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+</Project>
+```
+**`HotelManagement.Infrastructure.csproj`:**
 
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
-    <UseWindowsForms>true</UseWindowsForms>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.1" />
+    <ProjectReference Include="..\HotelManagement.Core\HotelManagement.Core.csproj" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.15" />
   </ItemGroup>
 </Project>
 ```
+Các file SQL trong thư mục `database/` được khai báo `EmbeddedResource` trong `HotelManagement.Infrastructure.csproj` với logical name thống nhất để `DbInitializer` đọc được. Không khai báo trùng một file SQL vừa là `EmbeddedResource` vừa là `Content` nếu không có chủ đích.
 
-Không tự chép cứng một phiên bản NuGet khác nhau ở từng máy. Một thành viên thêm/cập nhật package thì commit cả `.csproj` và `packages.lock.json` nếu nhóm bật chế độ khóa phiên bản.
+Không tự chép cứng một phiên bản NuGet khác nhau ở từng máy. Thành viên thay đổi package phải commit `.csproj` và cập nhật lock file nếu nhóm bật chế độ khóa phiên bản.
 
 ### 3.2. Lựa chọn cách truy cập dữ liệu
 
-Đồ án thống nhất sử dụng **ADO.NET trực tiếp qua `Microsoft.Data.SqlClient`** để phù hợp yêu cầu SQL Client và nội dung đã học. Không trộn ADO.NET và Entity Framework Core trong cùng một nghiệp vụ ở phiên bản đầu.
+Đồ án thống nhất sử dụng **ADO.NET trực tiếp qua `Microsoft.Data.Sqlite` kết hợp POCO Entity**. `Microsoft.Data.Sqlite` là ADO.NET provider cho SQLite và có thể sử dụng độc lập, không yêu cầu Entity Framework Core. Phiên bản hiện tại không sử dụng EF Core.
 
 | Thành phần | Vai trò |
 |---|---|
-| `SqlConnection` | Mở kết nối đến SQL Server cục bộ. |
-| `SqlCommand` | Thực thi SELECT/INSERT/UPDATE/DELETE hoặc Stored Procedure. |
-| `SqlParameter` | Truyền giá trị đầu vào an toàn; không nối chuỗi dữ liệu người dùng vào SQL. |
-| `SqlDataReader` | Đọc dữ liệu tuần tự khi cần lấy danh sách/kết quả truy vấn. |
-| `SqlTransaction` | Đảm bảo các bước check-in/check-out liên quan được thực hiện đồng bộ. |
-| `DataTable` / `BindingSource` | Hỗ trợ đưa dữ liệu lên DataGridView và lọc/hiển thị trên WinForms. |
+| `SqliteConnection` | Mở kết nối đến file SQLite. |
+| `SqliteCommand` | Thực thi SELECT/INSERT/UPDATE/DELETE. |
+| `SqliteParameter` | Truyền giá trị đầu vào an toàn; không nối chuỗi dữ liệu người dùng vào SQL. |
+| `SqliteDataReader` | Đọc dữ liệu tuần tự từ kết quả truy vấn. |
+| `SqliteTransaction` | Đảm bảo các bước cập nhật nhiều bảng trong cùng nghiệp vụ được thực hiện đồng bộ. |
+| `DataTable` / `BindingSource` | Hỗ trợ đưa dữ liệu lên DataGridView và lọc/hiển thị trên WinForms khi phù hợp. |
 
-Mọi thao tác CSDL phải đi qua lớp `Repository` hoặc `DataAccess`, không viết SQL trực tiếp trong sự kiện `Button_Click` của Form. Entity vẫn là các lớp C# thuần (POCO); Repository tự ánh xạ dữ liệu đọc từ `SqlDataReader`/`DataTable` sang Entity hoặc DTO. Dù môn học có giới thiệu Entity Framework Core, phiên bản này không dùng EF Core song song để tránh hai cơ chế truy cập dữ liệu trong cùng đồ án. Nếu giảng viên yêu cầu EF Core, cần thống nhất thay lớp Repository trước khi triển khai, không trộn hai cách trong một nghiệp vụ.
+Mọi thao tác CSDL phải đi qua `Repository` hoặc `DataAccess`, không viết SQL trực tiếp trong sự kiện `Button_Click` của Form. Entity là các lớp C# thuần (POCO). Repository ánh xạ dữ liệu đọc từ `SqliteDataReader`/`DataTable` sang Entity hoặc DTO. Không trộn ADO.NET với Entity Framework Core trong cùng một nghiệp vụ.
+```
 
 ### 3.3. Cấu hình kết nối cục bộ
 
-Chuỗi kết nối mẫu cho LocalDB:
+Ứng dụng sử dụng một file Database tại thư mục dữ liệu người dùng Windows, không đặt file đang ghi trong thư mục cài đặt hoặc thư mục source code.
 
-```text
-Server=(localdb)\MSSQLLocalDB;Database=HotelManagementDb;Integrated Security=True;TrustServerCertificate=True;
+Đường dẫn đề xuất:
+
+`%LOCALAPPDATA%\HotelManagement\Data\HotelManagementDb.sqlite`
+
+Cấu hình `src/HotelManagement.WinForms/appsettings.json`:
+
+```json
+{
+  "ConnectionStrings": {
+    "HotelManagementDb": "Data Source=%LOCALAPPDATA%/HotelManagement/Data/HotelManagementDb.sqlite"
+  }
+}
 ```
 
-- `Server`: instance LocalDB trên chính máy đang chạy chương trình.
-- `Database`: tên cơ sở dữ liệu của đồ án.
-- `Integrated Security=True`: dùng Windows Authentication, không lưu tài khoản/mật khẩu SQL trong mã nguồn.
-- `TrustServerCertificate=True`: chỉ dùng cho môi trường SQL Server cục bộ của đồ án khi cần xử lý chứng chỉ tự ký.
+`DbConnectionFactory` chịu trách nhiệm:
 
-Chuỗi kết nối đặt ở cấu hình riêng, chẳng hạn `appsettings.json` được đọc bằng `System.Text.Json`/Configuration package đã cài, hoặc tệp cấu hình ngoài thư mục cài đặt. Không commit mật khẩu hoặc chuỗi kết nối chứa thông tin bí mật lên Git.
+- Đọc connection string được truyền vào từ cấu hình.
+- Mở rộng biến môi trường `%LOCALAPPDATA%` bằng `Environment.ExpandEnvironmentVariables()`.
+- Chuẩn hóa `Data Source` thành đường dẫn tuyệt đối.
+- Tạo thư mục chứa file Database nếu chưa tồn tại.
+- Dùng `SqliteConnectionStringBuilder` với `Mode = ReadWriteCreate` và `ForeignKeys = true`.
+- Tạo một `SqliteConnection` mới cho mỗi thao tác Repository; không giữ một connection mở xuyên suốt ứng dụng.
 
+`ReadWriteCreate` cho phép SQLite tạo file Database khi file chưa tồn tại. SQLite không có lệnh `CREATE DATABASE` như SQL Server; file được tạo khi mở kết nối ở chế độ tạo mới.
+
+Khi khởi động, `Program.cs` phải đọc cấu hình, tạo `DbConnectionFactory`, gọi `DbInitializer.Initialize(connectionFactory)` rồi mới tạo và chạy `MainForm`. Nếu khởi tạo Database thất bại, ứng dụng hiển thị thông báo lỗi rõ ràng và không tiếp tục mở màn hình nghiệp vụ trong trạng thái CSDL chưa sẵn sàng.
+
+Các script trong `database/` được nhúng vào assembly `HotelManagement.Infrastructure`:
+
+1. `01_CreateDatabase.sql`: tài liệu hóa bước tạo Database; với SQLite, thao tác tạo file được thực hiện bởi `ReadWriteCreate`, không phải câu lệnh `CREATE DATABASE`.
+2. `02_CreateTables.sql`: tạo các bảng và ràng buộc khai báo ngay trong bảng.
+3. `03_CreateConstraintsAndIndexes.sql`: tạo các index bổ sung.
+4. `04_SeedData.sql`: thêm dữ liệu mẫu khi Database được khởi tạo lần đầu.
+
+Không commit file `.sqlite` đang sử dụng lên Git. Mỗi thành viên có Database cục bộ riêng được tạo từ cùng schema và seed script.
+````
 ### 3.4. Lưu ý về Rider và WinForms Designer
 
-Nếu Designer của một Form gặp lỗi, vẫn có thể chỉnh sửa mã `Form.cs`/`Form.Designer.cs`, nhưng không sửa thủ công phần mã do Designer sinh ra nếu chưa hiểu cấu trúc.
+Ứng dụng WinForms sử dụng `OutputType=WinExe`, vì vậy không tự mở cửa sổ Console khi chạy. Khi cần ghi thông tin debug, ưu tiên `System.Diagnostics.Debug.WriteLine()` và xem trong cửa sổ Debug/Output của Rider. Nếu gọi Win32 `AllocConsole()` từ Form, Windows sẽ mở thêm **cửa sổ Console hệ thống**; đây không phải một Form WinForms thứ hai. Chỉ sử dụng `AllocConsole()` khi chủ động muốn mở cửa sổ console riêng và phải gỡ mã debug trước khi phát hành.
 
 ---
 
@@ -146,11 +195,11 @@ Luồng xử lý thống nhất:
 ```text
 WinForms Form / UserControl
         ↓ gọi
-Service (nghiệp vụ + kiểm tra quy tắc)
+Service (nghiệp vụ + validation)
         ↓ gọi
-Repository / DataAccess (ADO.NET + SQL)
-        ↓
-SQL Server LocalDB
+Repository / DataAccess
+        ↓ ADO.NET – Microsoft.Data.Sqlite
+SQLite file (HotelManagementDb.sqlite)
 ```
 
 | Tầng | Trách nhiệm | Không thực hiện |
@@ -219,6 +268,7 @@ HotelManagement/
 │       ├── Data/
 │       │   ├── DbConnectionFactory.cs
 │       │   ├── DbInitializer.cs
+│       │   ├── SqliteValueConverter.cs
 │       │   └── Repositories/
 │       ├── Configuration/             # Đọc cấu hình cục bộ
 │       └── Sql/                        # Câu lệnh SQL dùng chung nếu cần
@@ -238,15 +288,17 @@ HotelManagement/
 ├── .gitignore
 └── README.md
 ```
+**Quy ước lưu trữ Database:** file `HotelManagementDb.sqlite` được tạo tại `%LOCALAPPDATA%\HotelManagement\Data\` trên từng máy. File Database runtime và các file phụ `-wal`, `-shm` không nằm trong repository Git.
 
+**Quy ước SQL resources:** bốn file trong `database/` được nhúng vào `HotelManagement.Infrastructure` bằng `EmbeddedResource`; `DbInitializer` đọc resource theo logical name. Không phụ thuộc vào working directory của Rider để tìm script lúc chạy.
 ### 4.3. Quy tắc phụ thuộc
 
 - `WinForms` được tham chiếu `Core` và `Infrastructure`.
 - `Infrastructure` được tham chiếu `Core`.
 - `Core` không tham chiếu `WinForms` hoặc `Infrastructure`.
-- Form chỉ gọi Service; Service gọi Repository; Repository thực thi SQL.
+- Form chỉ gọi Service; Service gọi Repository; Repository thực thi SQL thông qua `Microsoft.Data.Sqlite` và ADO.NET.
+- `DbConnectionFactory` là nơi duy nhất tạo connection string và `SqliteConnection`; Repository không tự tạo đường dẫn Database riêng.
 - Entity là lớp dữ liệu nghiệp vụ, không phải Form và không chứa logic truy vấn SQL.
-- Các nghiệp vụ quan trọng như check-in, ghi dịch vụ, check-out phải nằm trong Service để có thể kiểm thử và không bị lặp ở nhiều màn hình.
 
 ---
 
@@ -711,17 +763,17 @@ Các mẫu Regex chỉ là kiểm tra định dạng đầu vào, không thay th
 - Bọc các thao tác dễ phát sinh lỗi (CSDL, file, chuyển đổi dữ liệu) trong `try-catch` phù hợp.
 - Thông báo lỗi dễ hiểu cho người dùng; không hiển thị toàn bộ stack trace.
 - Ghi log chi tiết lỗi vào tệp cục bộ nếu cần phục vụ debug.
-- Dùng `using`/`await using` để đóng `SqlConnection`, `SqlCommand`, `SqlDataReader` và giải phóng tài nguyên.
-- `finally` chỉ dùng khi cần dọn dẹp thủ công; ưu tiên `using`.
+- Dùng `using`/`await using` để đóng `SqliteConnection`, `SqliteCommand`, `SqliteDataReader` và giải phóng tài nguyên.
 - Không dùng `catch (Exception) { }` để nuốt lỗi.
 - Xử lý riêng lỗi trùng khóa, vi phạm khóa ngoại, mất kết nối CSDL và lỗi dữ liệu không hợp lệ.
 
 ### 8.3. Quy tắc SQL an toàn
 
-- Tất cả truy vấn nhận dữ liệu nhập từ Form phải dùng `SqlParameter`.
-- Không nối chuỗi trực tiếp từ TextBox vào câu SQL.
-- Dùng transaction cho các thao tác cập nhật nhiều bảng trong một nghiệp vụ.
-- Không để Form tự mở kết nối SQL riêng lẻ.
+- Tất cả truy vấn nhận dữ liệu nhập từ Form phải dùng `SqliteParameter`.
+- Không nối chuỗi trực tiếp từ TextBox vào câu SQL. Với tên bảng/cột động, chỉ dùng danh sách tên cố định trong code; không nhận tên đối tượng SQL từ người dùng.
+- Dùng `SqliteTransaction` cho các thao tác cập nhật nhiều bảng trong một nghiệp vụ như đặt phòng, check-in và checkout.
+- Bảo đảm `ForeignKeys = true` trên mọi connection.
+- Không để Form tự mở kết nối SQLite riêng lẻ.
 
 ---
 
@@ -753,11 +805,11 @@ Các mẫu Regex chỉ là kiểm tra định dạng đầu vào, không thay th
 
 ### 9.3. Xử lý dữ liệu và tiền
 
-- Dùng `decimal` trong C# và `DECIMAL(18,0)` trong SQL Server cho tiền VND của đồ án.
-- Không tính tiền bằng `double`.
-- Không xóa cứng dữ liệu danh mục đã được sử dụng; dùng `IsActive`.
-- Lưu giá dịch vụ tại thời điểm phát sinh và giá phòng tại thời điểm check-in để lịch sử hóa đơn không bị thay đổi khi cập nhật bảng giá.
-
+- Tất cả truy vấn nhận dữ liệu nhập từ Form phải dùng `SqliteParameter`.
+- Không nối chuỗi trực tiếp từ TextBox vào câu SQL. Với tên bảng/cột động, chỉ dùng danh sách tên cố định trong code; không nhận tên đối tượng SQL từ người dùng.
+- Dùng `SqliteTransaction` cho các thao tác cập nhật nhiều bảng trong một nghiệp vụ như đặt phòng, check-in và checkout.
+- Bảo đảm `ForeignKeys = true` trên mọi connection.
+- Không để Form tự mở kết nối SQLite riêng lẻ.
 ---
 
 ## 10. Phân chia công việc cho 3 thành viên
@@ -961,8 +1013,8 @@ Mẫu: `<type>: <mô tả ngắn>`.
 | TC18 | Hoàn tất checkout | Checkout hoàn tất | Stay `COMPLETED`, phòng `CLEANING`. |
 | TC19 | Hoàn tất dọn phòng | Chọn phòng `CLEANING`, xác nhận dọn xong | Phòng chuyển `AVAILABLE`, hoặc `RESERVED` nếu còn đặt phòng gán trước có hiệu lực. |
 | TC20 | Báo cáo tháng | Chọn tháng có dữ liệu | Hiển thị công suất, doanh thu phòng và dịch vụ đúng theo dữ liệu mẫu. |
-| TC21 | Mất kết nối CSDL | Tắt LocalDB hoặc cấu hình sai | Thông báo không kết nối được; ứng dụng không crash đột ngột. |
-| TC22 | Khởi động lần đầu | Máy có LocalDB nhưng chưa có database | Chương trình khởi tạo database/schema/seed theo quy trình đã thiết kế. |
+| TC21 | Không mở được Database file | File bị khóa, thư mục không có quyền ghi hoặc cấu hình đường dẫn sai | Hiển thị lỗi dễ hiểu; không làm ứng dụng crash đột ngột. |
+| TC22 | Khởi động lần đầu | Máy chưa có file `HotelManagementDb.sqlite` | Chương trình tự tạo thư mục/file, tạo schema, index và seed data. |
 | TC23 | Kiểm tra đủ 20 màn hình | Mở lần lượt các mục điều hướng S01–S20 | Cả 20 màn hình đều mở được, hiển thị đúng tiêu đề/nội dung; không tính MainForm và popup. |
 | TC24 | Điều hướng danh sách – biểu mẫu | Từ S03/S05/S07/S09/S13 mở màn hình thêm-sửa tương ứng, sau đó Lưu hoặc Hủy | Điều hướng đúng màn hình; dữ liệu được lưu hoặc hủy đúng; quay lại danh sách và tải lại dữ liệu. |
 
@@ -971,7 +1023,7 @@ Mẫu: `<type>: <mô tả ngắn>`.
 - Có đủ **20 màn hình nghiệp vụ S01–S20** theo danh sách tại mục 5.2; các màn hình có thể điều hướng và luồng mở/quay lại hoạt động đúng. `MainForm` và các hộp thoại nhỏ không tính vào số lượng này.
 - Ứng dụng khởi động được trên Windows bằng file cài đặt.
 - Không cần Internet để mở ứng dụng và thực hiện nghiệp vụ.
-- Kết nối được SQL Server cục bộ và dữ liệu còn sau khi tắt/mở lại ứng dụng.
+- File SQLite được tạo và mở thành công tại thư mục dữ liệu người dùng; dữ liệu còn sau khi tắt/mở lại ứng dụng.
 - Sơ đồ phòng thể hiện đúng bốn màu trạng thái.
 - Không thể check-in phòng đang có khách hoặc đang dọn.
 - Có thể đặt trước, check-in, ghi dịch vụ, checkout và lưu hóa đơn xuyên suốt.
@@ -988,8 +1040,8 @@ Mẫu: `<type>: <mô tả ngắn>`.
 
 - Hệ điều hành Windows tương thích với WinForms.
 - Nếu dùng bản cài đặt self-contained thì không cần cài .NET Desktop Runtime riêng; runtime .NET được đóng gói cùng ứng dụng.
-- Máy triển khai vẫn cần SQL Server Express LocalDB (hoặc SQL Server Express cục bộ) vì self-contained .NET **không bao gồm SQL Server Database Engine**.
-- Không cần SQL Server Management Studio trên máy người dùng cuối nếu ứng dụng tự khởi tạo database và không yêu cầu người dùng quản trị SQL.
+- Không cần cài SQL Server, MySQL hoặc Database Server. `Microsoft.Data.Sqlite` và thư viện SQLite native được cung cấp thông qua các package phụ thuộc của ứng dụng.
+- Người dùng cuối không cần Navicat; Navicat chỉ là công cụ phát triển/kiểm tra dữ liệu.
 
 ### 13.2. Publish ứng dụng
 
@@ -1013,27 +1065,26 @@ Dùng Inno Setup để tạo `HotelManagement_Setup.exe`:
 
 - Copy toàn bộ nội dung `artifacts/publish` vào thư mục cài đặt, ví dụ `{autopf}\HotelManagement`.
 - Tạo shortcut Start Menu/Desktop nếu người dùng chọn.
-- Đưa script SQL khởi tạo vào thư mục dữ liệu hoặc resource phù hợp.
-- Không ghi database đang hoạt động vào `Program Files`; dữ liệu runtime nên lưu tại thư mục dữ liệu người dùng, ví dụ `%LOCALAPPDATA%\HotelManagement\Data`.
-- Kiểm tra LocalDB đã được cài. Nếu chưa, hiển thị hướng dẫn cài LocalDB hoặc tích hợp bộ cài LocalDB riêng theo điều kiện phân phối của Microsoft.
-- Khi chạy lần đầu, ứng dụng kiểm tra database; nếu chưa có thì tạo database, tạo bảng và nạp dữ liệu khởi tạo.
+- Các SQL scripts đã được nhúng trong `HotelManagement.Infrastructure`; không bắt buộc copy ra file ngoài khi chạy.
+- Không ghi Database đang hoạt động vào `Program Files`; dữ liệu runtime lưu tại `%LOCALAPPDATA%\HotelManagement\Data`.
+- Khi chạy lần đầu, ứng dụng mở SQLite ở chế độ `ReadWriteCreate`, sau đó `DbInitializer` tạo bảng, index và seed data.
+- Không đóng gói file SQLite đang chứa dữ liệu phát triển cá nhân. Nếu cần dữ liệu demo, khởi tạo từ script seed dùng chung.
 
-**Phân biệt hai gói:**
+**Phân biệt hai thành phần:**
 
 1. `HotelManagement_Setup.exe`: bộ cài ứng dụng do nhóm tạo.
-2. `SQL Server Express LocalDB`: thành phần Database Engine cần có riêng hoặc được đóng gói như prerequisite. Không được quảng bá rằng file Setup đã bao gồm SQL Server nếu nhóm chưa thực sự tích hợp bộ cài và kiểm thử phần đó.
+2. `HotelManagementDb.sqlite`: file dữ liệu được ứng dụng tạo và sử dụng tại máy người dùng; không phải Database Server hay dịch vụ Windows.
 
 ### 13.4. Kiểm thử trên máy sạch
 
 Trước khi nộp, thử trên máy ảo hoặc máy Windows khác:
 
 1. Chưa có source code và chưa có Rider.
-2. Cài LocalDB theo cách nhóm đã hướng dẫn.
-3. Chạy `HotelManagement_Setup.exe`.
-4. Mở ứng dụng; kiểm tra database tự khởi tạo.
-5. Thử tạo khách, đặt phòng, check-in, ghi dịch vụ, checkout, thanh toán, in mô phỏng.
-6. Đóng và mở lại ứng dụng; xác nhận dữ liệu còn.
-7. Ngắt Internet/Wi-Fi; xác nhận toàn bộ chức năng vẫn hoạt động.
+2. Chạy `HotelManagement_Setup.exe`.
+3. Mở ứng dụng; kiểm tra thư mục `%LOCALAPPDATA%\HotelManagement\Data` và xác nhận Database tự khởi tạo.
+4. Thử tạo khách, đặt phòng, check-in, ghi dịch vụ, checkout, thanh toán và in mô phỏng.
+5. Đóng và mở lại ứng dụng; xác nhận dữ liệu còn.
+6. Ngắt Internet/Wi-Fi; xác nhận toàn bộ chức năng vẫn hoạt động.
 
 ---
 
@@ -1042,7 +1093,7 @@ Trước khi nộp, thử trên máy ảo hoặc máy Windows khác:
 | Giai đoạn | Công việc | Kết quả cần có |
 |---|---|---|
 | 1. Chốt nền | Thống nhất Entity, enum, quy tắc trạng thái, công thức tính tiền, connection string, cấu trúc solution | Tài liệu Entity và project spec được nhóm xác nhận; solution build được. |
-| 2. CSDL và khung giao diện | Tạo database scripts, Repository nền, MainForm, điều hướng, component chung và khung 20 màn hình S01–S20 | Mở được WinForms, kết nối LocalDB, điều hướng được đến các màn hình đã tạo. |
+| 2. CSDL và khung giao diện | Tạo database scripts, Repository nền, MainForm, điều hướng, component chung và khung 20 màn hình S01–S20 | Mở được WinForms, khởi tạo và kết nối file SQLite cục bộ, điều hướng được đến các màn hình đã tạo. |
 | 3. Danh mục và đặt phòng | Quản lý phòng/loại/tầng/dịch vụ; khách hàng; đặt phòng | CRUD và kiểm tra khả dụng hoạt động. |
 | 4. Check-in và dịch vụ | Nhận phòng, chuyển trạng thái, ghi nhận dịch vụ | Tạo Stay và thêm dịch vụ chính xác. |
 | 5. Check-out và báo cáo | Tính tiền, cọc, hóa đơn, thanh toán/in mô phỏng, báo cáo tháng | Hoàn tất vòng đời một lượt lưu trú và số liệu báo cáo. |
@@ -1053,13 +1104,14 @@ Trước khi nộp, thử trên máy ảo hoặc máy Windows khác:
 ## 15. Các quyết định cần ghi nhớ
 
 1. Đây là **ứng dụng WinForms offline**, có đủ 20 màn hình nghiệp vụ S01–S20 theo mục 5.2.
-2. Dữ liệu lưu trong SQL Server cục bộ; không dùng dữ liệu giả trong bộ nhớ làm nơi lưu chính.
-3. Dùng ADO.NET `Microsoft.Data.SqlClient`; tất cả SQL có tham số.
-4. Các thao tác khách hàng do lễ tân nhập; không làm cổng khách hàng.
-5. Thanh toán và in là mô phỏng, nhưng phải lưu trạng thái/kết quả trong database.
-6. Phòng chỉ trở lại `AVAILABLE` sau khi hoàn tất dọn phòng và không còn đặt trước gán vào phòng; nếu còn đặt trước thì trạng thái là `RESERVED`.
-7. Thành viên không tự ý đổi Entity, enum, công thức nghiệp vụ hoặc hợp đồng Service đã thống nhất.
-8. Installer ứng dụng và Database Engine là hai thành phần khác nhau; phải kiểm thử prerequisite LocalDB trên máy cài mới.
+2. Dữ liệu chính được lưu trong file SQLite cục bộ; không dùng dữ liệu giả trong bộ nhớ làm nơi lưu chính khi đã hoàn tất tích hợp Service/Repository.
+3. Dùng ADO.NET `Microsoft.Data.Sqlite` kết hợp POCO Entity; không dùng Entity Framework Core trong phiên bản hiện tại.
+4. Mọi Form gọi Service; Service gọi Repository; Repository thao tác SQLite. Tất cả SQL có tham số.
+5. Các thao tác khách hàng do lễ tân nhập; không làm cổng khách hàng.
+6. Thanh toán và in là mô phỏng, nhưng phải lưu trạng thái/kết quả trong Database.
+7. Phòng chỉ trở lại `Available` sau khi hoàn tất dọn phòng và không còn đặt trước gán vào phòng; nếu còn đặt trước thì trạng thái là `Reserved`.
+8. Thành viên không tự ý đổi Entity, enum, công thức nghiệp vụ, tên cột hoặc hợp đồng Service đã thống nhất.
+9. File SQLite runtime nằm trong `%LOCALAPPDATA%` và không commit lên Git. Chỉ commit schema scripts, Entity, Repository, Service và cấu hình không chứa bí mật.
 
 ---
 
@@ -1067,8 +1119,9 @@ Trước khi nộp, thử trên máy ảo hoặc máy Windows khác:
 
 - Microsoft – Target frameworks: <https://learn.microsoft.com/en-us/dotnet/standard/frameworks> (WinForms dùng TFM nền tảng Windows như `net10.0-windows`).
 - Microsoft – .NET application publishing: <https://learn.microsoft.com/en-us/dotnet/core/deploying> (framework-dependent và self-contained deployment).
-- Microsoft – SQL Server Express LocalDB: <https://learn.microsoft.com/en-us/sql/database-engine/configure-windows/sql-server-express-localdb> (cài đặt, instance và kết nối LocalDB).
-- Microsoft – Microsoft.Data.SqlClient: <https://learn.microsoft.com/en-us/sql/connect/ado-net/microsoft-ado-net-sql-server> (ADO.NET Provider cho SQL Server).
+- Microsoft – Microsoft.Data.Sqlite overview: <https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/> (ADO.NET provider cho SQLite).
+- Microsoft – Microsoft.Data.Sqlite connection strings: <https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/connection-strings> (Data Source, ReadWriteCreate, Foreign Keys và connection string builder).
+- Microsoft – SQLite data types: <https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/types> (ánh xạ kiểu dữ liệu SQLite và .NET).
 - JetBrains – Windows Forms Designer: <https://www.jetbrains.com/help/rider/Working_with_Windows_Forms.html>.
 - JetBrains – Rider 2024.3: <https://www.jetbrains.com/rider/whatsnew/2024-3/> (bổ sung WinForms Designer cho dự án .NET 6+).
 

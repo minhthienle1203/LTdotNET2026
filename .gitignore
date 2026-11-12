@@ -36,3 +36,11 @@ setup-output/
 # Inno Setup output
 installer/Output/
 installer/output/
+
+# SQLite Database
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.db
+*.db-shm
+*.db-wal
