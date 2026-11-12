@@ -1,560 +1,775 @@
-# MÔ TẢ ENTITY – HỆ THỐNG QUẢN LÝ KHÁCH SẠN
+# MÔ TẢ ENTITY – HOTEL MANAGEMENT
 
-> Tài liệu này là hợp đồng dữ liệu chung cho 3 thành viên. Tên Entity, thuộc tính, khóa và enum cần được thống nhất trước khi triển khai Form/Service/Repository.
-
-## 1. Nguyên tắc thiết kế
-
-- Entity là các lớp C# mô tả dữ liệu nghiệp vụ; không chứa mã giao diện WinForms hoặc câu SQL.
-- Mỗi Entity tương ứng một bảng SQL Server trong phạm vi thiết kế này.
-- Khóa chính dùng `int IDENTITY(1,1)`; các khóa ngoại dùng `int`.
-- Tiền VND dùng `decimal` trong C# và `DECIMAL(18,0)` trong SQL Server; không dùng `float` hoặc `double`.
-- Ngày giờ dùng `DateTime` trong C# và `DATETIME2` trong SQL Server. Ứng dụng chạy cục bộ theo giờ địa phương.
-- Các thuộc tính tùy chọn phải nullable (`string?`, `int?`, `DateTime?`).
-- Danh mục đã có lịch sử sử dụng nên dùng `IsActive` để ngừng sử dụng, không xóa cứng.
-- `RoomStatus` là trạng thái vận hành của phòng. Phòng `RESERVED` chỉ được đặt khi một Reservation được gán `RoomId` cụ thể.
-- Giá phòng được chụp tại thời điểm check-in; giá dịch vụ được chụp tại thời điểm ghi nhận để hóa đơn lịch sử không đổi khi bảng giá được cập nhật.
+> **Phiên bản:** ADO.NET + POCO Entity + SQLite  
+> **Project chứa Entity:** `src/HotelManagement.Core`  
+> **Namespace:** `HotelManagement.Core.Entities` và `HotelManagement.Core.Enums`  
+> **Số Entity:** 10  
+> **Số Enum:** 9  
+> **CSDL:** `HotelManagementDb.sqlite`
+>
+> Tài liệu này mô tả các class Entity và Enum hiện có trong source code, đồng thời đối chiếu với schema SQLite tại `database/02_CreateTables.sql` và `database/03_CreateConstraintsAndIndexes.sql`. Đây là hợp đồng dữ liệu dùng chung cho cả nhóm. Không tự ý đổi tên class, property, kiểu dữ liệu, giá trị enum hoặc quan hệ nếu chưa thống nhất.
 
 ---
 
-## 2. Sơ đồ quan hệ
+## 1. Mục đích và nguyên tắc thiết kế
+
+### 1.1. Entity là gì?
+
+Entity là class C# thuần (POCO – Plain Old CLR Object) đại diện cho một đối tượng nghiệp vụ hoặc một bản ghi trong Database. Entity chỉ chứa dữ liệu và không phụ thuộc vào WinForms, `MessageBox`, `SqliteConnection` hoặc câu lệnh SQL.
+
+Ví dụ: `Room` biểu diễn một phòng trong khách sạn; `Stay` biểu diễn một lượt lưu trú thực tế; `Invoice` biểu diễn hóa đơn đã chốt cho một lượt lưu trú.
+
+### 1.2. Quy tắc chung
+
+- Mỗi Entity tương ứng với một bảng SQLite cùng tên.
+- Namespace Entity: `HotelManagement.Core.Entities`.
+- Namespace Enum: `HotelManagement.Core.Enums`.
+- Khóa chính hiện tại dùng `int` trong C# và `INTEGER PRIMARY KEY AUTOINCREMENT` trong SQLite.
+- Khóa ngoại dùng `int` hoặc `int?` nếu quan hệ được phép không có.
+- Property không bắt buộc dùng kiểu nullable như `string?`, `int?`, `DateTime?`.
+- Tiền VND dùng `decimal` trong C#, nhưng lưu `INTEGER` trong SQLite theo đơn vị đồng nguyên. Phải chuyển đổi bằng `SqliteValueConverter`; không truyền trực tiếp decimal vào cột tiền.
+- `StayService.Quantity` dùng `decimal` trong C# và lưu thành `TEXT` invariant trong SQLite để giữ phần thập phân.
+- Ngày giờ dùng `DateTime` trong C# và `TEXT` trong SQLite. Dữ liệu seed và giá trị mặc định hiện dùng dạng `yyyy-MM-dd HH:mm:ss` theo giờ địa phương.
+- `bool` trong C# được lưu bằng `INTEGER` (`0` hoặc `1`).
+- Enum được lưu bằng `TEXT` đúng tên thành viên enum, ví dụ `Available`, `InProgress`, `CCCD`; không lưu số thứ tự enum.
+- Không thêm Navigation Property chứa toàn bộ Entity khác nếu chưa có nhu cầu. Khi cần dữ liệu liên kết cho giao diện, Repository có thể dùng `JOIN` và trả DTO.
+- Danh mục đã được sử dụng nên ngừng hoạt động bằng `IsActive`, không xóa cứng.
+
+### 1.3. Phân biệt Entity, DTO, Service và Repository
+
+| Thành phần | Trách nhiệm | Ví dụ |
+|---|---|---|
+| Entity | Mô tả dữ liệu nghiệp vụ/bản ghi | `Room`, `Customer`, `Stay` |
+| Enum | Giới hạn tập giá trị hợp lệ | `RoomStatus`, `StayStatus` |
+| DTO | Gom dữ liệu phục vụ một màn hình hoặc kết quả truy vấn | `RoomDashboardDto` (khi triển khai) |
+| Service | Kiểm tra quy tắc và điều phối nghiệp vụ | `RoomService`, `CheckInService` |
+| Repository | Thực thi SQL, đọc dữ liệu và ánh xạ thành Entity/DTO | `RoomRepository` |
+
+Luồng bắt buộc:
+
+```text
+WinForms Form / UserControl
+        ↓
+Service (nghiệp vụ + validation)
+        ↓
+Repository / DataAccess
+        ↓ ADO.NET – Microsoft.Data.Sqlite
+SQLite Database (HotelManagementDb.sqlite)
+```
+
+---
+
+## 2. Tổng quan 10 Entity
+
+| STT | Entity | Bảng SQLite | Vai trò chính |
+|---:|---|---|---|
+| 1 | `Floor` | `Floor` | Lưu tầng của khách sạn. |
+| 2 | `RoomType` | `RoomType` | Lưu loại phòng, sức chứa và giá giờ/ngày. |
+| 3 | `Room` | `Room` | Lưu từng phòng vật lý và trạng thái vận hành. |
+| 4 | `Customer` | `Customer` | Lưu hồ sơ khách hàng do lễ tân nhập. |
+| 5 | `Reservation` | `Reservation` | Lưu đặt phòng trước. |
+| 6 | `Stay` | `Stay` | Lưu lượt lưu trú thực tế được tạo khi check-in. |
+| 7 | `HotelService` | `HotelService` | Lưu danh mục dịch vụ nội bộ. |
+| 8 | `StayService` | `StayService` | Lưu từng khoản dịch vụ phát sinh của một lượt lưu trú. |
+| 9 | `Invoice` | `Invoice` | Lưu kết quả tính tiền và trạng thái hóa đơn của một Stay. |
+| 10 | `Payment` | `Payment` | Lưu giao dịch thanh toán mô phỏng nội bộ. |
+
+### 2.1. Sơ đồ quan hệ
 
 ```mermaid
 erDiagram
     Floor ||--o{ Room : contains
     RoomType ||--o{ Room : classifies
-    RoomType ||--o{ Reservation : requested_for
+
     Customer ||--o{ Reservation : makes
+    RoomType ||--o{ Reservation : requests
     Room o|--o{ Reservation : optionally_assigned
-    Customer ||--o{ Stay : stays
+
+    Customer ||--o{ Stay : has
     Room ||--o{ Stay : hosts
     Reservation o|--o| Stay : creates
+
     Stay ||--o{ StayService : incurs
     HotelService ||--o{ StayService : selected_as
+
     Stay ||--o| Invoice : billed_by
     Invoice ||--o{ Payment : receives
-
-    Floor {
-        int FloorId PK
-        int FloorNumber UK
-        string FloorName
-        int SortOrder
-        bool IsActive
-    }
-    RoomType {
-        int RoomTypeId PK
-        string TypeCode UK
-        string TypeName
-        int MaxOccupancy
-        decimal HourlyRate
-        decimal DailyRate
-        bool IsActive
-    }
-    Room {
-        int RoomId PK
-        string RoomCode UK
-        int FloorId FK
-        int RoomTypeId FK
-        string Status
-        string Note
-        bool IsActive
-    }
-    Customer {
-        int CustomerId PK
-        string FullName
-        string IdentityType
-        string IdentityNumber
-        string Phone
-        string Email
-        string Address
-    }
-    Reservation {
-        int ReservationId PK
-        string ReservationCode UK
-        int CustomerId FK
-        int RoomTypeId FK
-        int RoomId FK
-        datetime ExpectedCheckIn
-        datetime ExpectedCheckOut
-        decimal DepositAmount
-        string Status
-    }
-    Stay {
-        int StayId PK
-        int ReservationId FK
-        int CustomerId FK
-        int RoomId FK
-        datetime ActualCheckIn
-        datetime ExpectedCheckOut
-        datetime ActualCheckOut
-        int GuestCount
-        decimal HourlyRateAtCheckIn
-        decimal DailyRateAtCheckIn
-        string Status
-    }
-    HotelService {
-        int ServiceId PK
-        string ServiceCode UK
-        string ServiceName
-        string Category
-        string UnitName
-        decimal UnitPrice
-        bool IsActive
-    }
-    StayService {
-        int StayServiceId PK
-        int StayId FK
-        int ServiceId FK
-        decimal Quantity
-        decimal UnitPrice
-        decimal Amount
-        datetime UsedAt
-    }
-    Invoice {
-        int InvoiceId PK
-        string InvoiceCode UK
-        int StayId FK
-        datetime CreatedAt
-        string ChargeBasis
-        int ChargedUnits
-        decimal AppliedRate
-        decimal RoomCharge
-        decimal ServiceCharge
-        decimal SubTotal
-        decimal DepositDeducted
-        decimal AmountDue
-        decimal RefundDue
-        string Status
-        datetime PrintedAt
-    }
-    Payment {
-        int PaymentId PK
-        int InvoiceId FK
-        string PaymentCode UK
-        decimal Amount
-        string Method
-        string Status
-        datetime PaidAt
-    }
 ```
 
-> Trong Mermaid, quan hệ `Room o|--o{ Reservation` biểu diễn `Reservation.RoomId` là tùy chọn. Quan hệ Reservation–Stay là 0..1 ở mỗi phía trong phạm vi đồ án: đặt phòng có thể chưa check-in; một đặt phòng chỉ tạo tối đa một lượt Stay.
+### 2.2. Giải thích quan hệ
+
+- Một `Floor` có nhiều `Room`; mỗi `Room` thuộc đúng một `Floor`.
+- Một `RoomType` có nhiều `Room`; mỗi `Room` thuộc đúng một `RoomType`.
+- Một `Customer` có thể tạo nhiều `Reservation` và có nhiều `Stay` theo thời gian.
+- Một `Reservation` luôn thuộc một `Customer` và một `RoomType`; `RoomId` có thể `null` nếu khách chỉ đặt theo loại phòng, chưa gán phòng cụ thể.
+- Một `Reservation` có thể chưa check-in hoặc tạo tối đa một `Stay`. Index lọc `UX_Stay_Reservation` bảo đảm một `ReservationId` khác `NULL` không xuất hiện ở hai Stay.
+- Một `Stay` thuộc một `Customer`, một `Room`, và có thể liên kết đến một `Reservation` hoặc là khách vãng lai (`ReservationId = null`).
+- Một `Stay` có nhiều `StayService` và tối đa một `Invoice` (`Invoice.StayId` là `UNIQUE`).
+- Một `HotelService` có thể được sử dụng nhiều lần qua nhiều bản ghi `StayService`.
+- Một `Invoice` có thể có nhiều `Payment` theo cấu trúc hiện tại. Trong quy trình MVP thông thường chỉ ghi một giao dịch thanh toán; schema hiện tại chưa đặt `UNIQUE` trên `Payment.InvoiceId`, vì vậy không được giả định Database đã chặn nhiều Payment cho cùng Invoice.
 
 ---
 
-## 3. Danh sách Entity
+## 3. Chi tiết các Entity
 
 ## 3.1. `Floor` – Tầng
 
-**Mục đích:** lưu các tầng để nhóm phòng trên sơ đồ.
+**File:** `Entities/Floor.cs`  
+**Bảng:** `Floor`
 
-| Thuộc tính C# | Kiểu C# | Cột SQL đề xuất | Bắt buộc | Mô tả |
+**Mục đích:** Lưu danh sách tầng để phân nhóm phòng trong màn hình S01 và bộ lọc tầng trong các màn hình quản lý phòng.
+
+| Property C# | Kiểu C# | Cột SQLite | Null? | Mô tả |
 |---|---|---|---|---|
-| `FloorId` | `int` | `FloorId INT IDENTITY` | PK | Khóa chính. |
-| `FloorNumber` | `int` | `FloorNumber INT` | Có | Số tầng; không trùng. |
-| `FloorName` | `string` | `FloorName NVARCHAR(100)` | Có | Tên hiển thị, ví dụ Tầng 1. |
-| `SortOrder` | `int` | `SortOrder INT` | Có | Thứ tự hiển thị. |
-| `IsActive` | `bool` | `IsActive BIT` | Có | Còn sử dụng hay không. |
+| `FloorId` | `int` | `FloorId INTEGER PRIMARY KEY AUTOINCREMENT` | Không | Khóa chính tự tăng. |
+| `FloorNumber` | `int` | `FloorNumber INTEGER NOT NULL UNIQUE` | Không | Số tầng; không được trùng. |
+| `FloorName` | `string` | `FloorName TEXT NOT NULL` | Không | Tên hiển thị, ví dụ `Tầng 1`. |
+| `SortOrder` | `int` | `SortOrder INTEGER NOT NULL DEFAULT 0` | Không | Thứ tự sắp xếp khi hiển thị. |
+| `IsActive` | `bool` | `IsActive INTEGER NOT NULL DEFAULT 1` | Không | `1`: đang sử dụng; `0`: ngừng sử dụng. DB có CHECK chỉ nhận 0/1. |
 
-**Quan hệ:** một Floor có nhiều Room.
+**Quan hệ:** `Floor` 1 – N `Room`.
+
+**Quy tắc:**
+
+- Không tạo hai tầng có cùng `FloorNumber`.
+- Tầng đã có phòng không xóa cứng; dùng `IsActive = false`.
+- Bộ lọc tầng của S01 chỉ nên hiển thị các tầng đang hoạt động.
+
+---
 
 ## 3.2. `RoomType` – Loại phòng
 
-**Mục đích:** định nghĩa loại phòng và bảng giá.
+**File:** `Entities/RoomType.cs`  
+**Bảng:** `RoomType`
 
-| Thuộc tính C# | Kiểu C# | Cột SQL đề xuất | Bắt buộc | Mô tả |
+**Mục đích:** Định nghĩa nhóm phòng, sức chứa tối đa và bảng giá theo giờ/ngày.
+
+| Property C# | Kiểu C# | Cột SQLite | Null? | Mô tả |
 |---|---|---|---|---|
-| `RoomTypeId` | `int` | `RoomTypeId INT IDENTITY` | PK | Khóa chính. |
-| `TypeCode` | `string` | `TypeCode VARCHAR(30)` | Có, unique | Mã loại phòng. |
-| `TypeName` | `string` | `TypeName NVARCHAR(100)` | Có | Tên loại phòng. |
-| `Description` | `string?` | `Description NVARCHAR(500)` | Không | Mô tả. |
-| `MaxOccupancy` | `int` | `MaxOccupancy INT` | Có | Sức chứa tối đa. |
-| `HourlyRate` | `decimal` | `HourlyRate DECIMAL(18,0)` | Có | Giá theo giờ. |
-| `DailyRate` | `decimal` | `DailyRate DECIMAL(18,0)` | Có | Giá theo ngày. |
-| `IsActive` | `bool` | `IsActive BIT` | Có | Còn kinh doanh hay không. |
+| `RoomTypeId` | `int` | `RoomTypeId INTEGER PRIMARY KEY AUTOINCREMENT` | Không | Khóa chính tự tăng. |
+| `TypeCode` | `string` | `TypeCode TEXT NOT NULL UNIQUE` | Không | Mã loại phòng, ví dụ `STD`, `DLX`. |
+| `TypeName` | `string` | `TypeName TEXT NOT NULL` | Không | Tên loại phòng để hiển thị. |
+| `Description` | `string?` | `Description TEXT NULL` | Có | Mô tả loại phòng. |
+| `MaxOccupancy` | `int` | `MaxOccupancy INTEGER NOT NULL CHECK (> 0)` | Không | Sức chứa tối đa. |
+| `HourlyRate` | `decimal` | `HourlyRate INTEGER NOT NULL CHECK (>= 0)` | Không | Giá thuê theo giờ, đơn vị VND. |
+| `DailyRate` | `decimal` | `DailyRate INTEGER NOT NULL CHECK (>= 0)` | Không | Giá thuê theo ngày, đơn vị VND. |
+| `IsActive` | `bool` | `IsActive INTEGER NOT NULL DEFAULT 1` | Không | Còn kinh doanh hay đã ngừng. |
 
-**Quan hệ:** một RoomType có nhiều Room và có thể được chọn trong nhiều Reservation.
+**Quan hệ:**
+
+- Một `RoomType` có nhiều `Room`.
+- Một `RoomType` có thể được tham chiếu bởi nhiều `Reservation`.
+
+**Quy tắc:**
+
+- `TypeCode` không được trùng.
+- `MaxOccupancy > 0`.
+- Giá giờ/ngày không âm.
+- Khi check-in, số khách thực tế không được vượt `MaxOccupancy` của loại phòng.
+- Khi tạo Stay, sao chép `HourlyRate` và `DailyRate` sang `Stay.HourlyRateAtCheckIn` và `Stay.DailyRateAtCheckIn`. Không đọc giá hiện tại để tính lại hóa đơn lịch sử.
+
+---
 
 ## 3.3. `Room` – Phòng
 
-**Mục đích:** lưu thông tin từng phòng thực tế.
+**File:** `Entities/Room.cs`  
+**Bảng:** `Room`
 
-| Thuộc tính C# | Kiểu C# | Cột SQL đề xuất | Bắt buộc | Mô tả |
+**Mục đích:** Đại diện cho một phòng vật lý trong khách sạn. Đây là dữ liệu chính của sơ đồ phòng S01.
+
+| Property C# | Kiểu C# | Cột SQLite | Null? | Mô tả |
 |---|---|---|---|---|
-| `RoomId` | `int` | `RoomId INT IDENTITY` | PK | Khóa chính. |
-| `RoomCode` | `string` | `RoomCode VARCHAR(20)` | Có, unique | Mã phòng, ví dụ 101. |
-| `FloorId` | `int` | `FloorId INT` | FK, có | Tầng của phòng. |
-| `RoomTypeId` | `int` | `RoomTypeId INT` | FK, có | Loại phòng. |
-| `Status` | `RoomStatus` | `Status VARCHAR(20)` | Có | Trạng thái hiện tại. |
-| `Note` | `string?` | `Note NVARCHAR(300)` | Không | Ghi chú. |
-| `IsActive` | `bool` | `IsActive BIT` | Có | Phòng còn được đưa vào kinh doanh hay không. |
+| `RoomId` | `int` | `RoomId INTEGER PRIMARY KEY AUTOINCREMENT` | Không | Khóa chính tự tăng. |
+| `RoomCode` | `string` | `RoomCode TEXT NOT NULL UNIQUE` | Không | Mã phòng, ví dụ `101`, `201`. |
+| `FloorId` | `int` | `FloorId INTEGER NOT NULL` | Không | Khóa ngoại đến `Floor.FloorId`. |
+| `RoomTypeId` | `int` | `RoomTypeId INTEGER NOT NULL` | Không | Khóa ngoại đến `RoomType.RoomTypeId`. |
+| `Status` | `RoomStatus` | `Status TEXT NOT NULL DEFAULT 'Available'` | Không | Trạng thái vận hành hiện tại. |
+| `Note` | `string?` | `Note TEXT NULL` | Có | Ghi chú phòng. |
+| `IsActive` | `bool` | `IsActive INTEGER NOT NULL DEFAULT 1` | Không | Phòng còn được đưa vào kinh doanh hay không. |
+
+**Khóa ngoại:**
+
+- `FloorId` → `Floor.FloorId`, `ON DELETE RESTRICT`.
+- `RoomTypeId` → `RoomType.RoomTypeId`, `ON DELETE RESTRICT`.
 
 **Quan hệ:**
 
-- Nhiều Room thuộc một Floor.
-- Nhiều Room thuộc một RoomType.
-- Một Room có thể xuất hiện trong nhiều Reservation ở các khoảng thời gian khác nhau.
-- Một Room có nhiều Stay theo lịch sử, nhưng chỉ có tối đa một Stay `IN_PROGRESS` tại một thời điểm.
+- Nhiều phòng thuộc một tầng.
+- Nhiều phòng thuộc một loại phòng.
+- Một phòng có thể được gán vào nhiều Reservation ở các khoảng thời gian khác nhau.
+- Một phòng có nhiều Stay trong lịch sử; Service phải ngăn hai Stay đang hoạt động cùng chiếm một phòng.
 
-**Quy tắc trạng thái:**
+**Trạng thái:**
 
-- `AVAILABLE`: phòng sẵn sàng nhận khách.
-- `RESERVED`: đã gán cho một đặt phòng còn hiệu lực.
-- `OCCUPIED`: có Stay đang `IN_PROGRESS`.
-- `CLEANING`: đã checkout và chưa xác nhận dọn xong.
+| Giá trị `RoomStatus` | Màu trên Dashboard | Ý nghĩa |
+|---|---|---|
+| `Available` | Xanh lá | Phòng sẵn sàng nhận khách. |
+| `Reserved` | Cam | Phòng đã được gán cho Reservation còn hiệu lực. |
+| `Occupied` | Đỏ | Phòng đang có khách lưu trú. |
+| `Cleaning` | Vàng | Khách đã checkout; phòng đang chờ dọn xong. |
+
+**Quy tắc:**
+
+- Không tự ý chuyển phòng sang `Occupied` hoặc `Reserved` bằng thao tác sửa danh mục thông thường. Hai trạng thái này phải phát sinh từ nghiệp vụ check-in/đặt phòng.
+- Phòng `Cleaning` không được check-in.
+- Chỉ gán `Reserved` khi Reservation có `RoomId` cụ thể. Reservation chỉ giữ chỗ theo loại phòng không làm đổi trạng thái phòng vật lý.
+- Hoàn tất dọn phòng: chuyển sang `Reserved` nếu còn Reservation hợp lệ được gán phòng; nếu không thì `Available`.
+- Phòng đã có lịch sử không xóa cứng; dùng `IsActive = false` nếu ngừng kinh doanh.
+
+---
 
 ## 3.4. `Customer` – Khách hàng
 
-**Mục đích:** lưu hồ sơ khách do nhân viên nhập, dùng chung cho đặt phòng và check-in.
+**File:** `Entities/Customer.cs`  
+**Bảng:** `Customer`
 
-| Thuộc tính C# | Kiểu C# | Cột SQL đề xuất | Bắt buộc | Mô tả |
+**Mục đích:** Lưu hồ sơ khách do lễ tân nhập. Không có tài khoản khách hàng, đăng nhập hoặc xác minh giấy tờ trực tuyến.
+
+| Property C# | Kiểu C# | Cột SQLite | Null? | Mô tả |
 |---|---|---|---|---|
-| `CustomerId` | `int` | `CustomerId INT IDENTITY` | PK | Khóa chính. |
-| `FullName` | `string` | `FullName NVARCHAR(150)` | Có | Họ tên. |
-| `IdentityType` | `IdentityType` | `IdentityType VARCHAR(20)` | Có | `CCCD` hoặc `PASSPORT`. |
-| `IdentityNumber` | `string` | `IdentityNumber VARCHAR(30)` | Có, unique theo loại | Số giấy tờ. |
-| `Phone` | `string` | `Phone VARCHAR(20)` | Có | Số điện thoại liên hệ. |
-| `Email` | `string?` | `Email VARCHAR(150)` | Không | Email. |
-| `Address` | `string?` | `Address NVARCHAR(300)` | Không | Địa chỉ. |
-| `CreatedAt` | `DateTime` | `CreatedAt DATETIME2` | Có | Ngày tạo hồ sơ. |
-| `IsActive` | `bool` | `IsActive BIT` | Có | Trạng thái hồ sơ. |
+| `CustomerId` | `int` | `CustomerId INTEGER PRIMARY KEY AUTOINCREMENT` | Không | Khóa chính tự tăng. |
+| `FullName` | `string` | `FullName TEXT NOT NULL` | Không | Họ và tên khách. |
+| `IdentityType` | `IdentityType` | `IdentityType TEXT NOT NULL` | Không | Loại giấy tờ: `CCCD` hoặc `Passport`. |
+| `IdentityNumber` | `string` | `IdentityNumber TEXT NOT NULL` | Không | Số CCCD/hộ chiếu. |
+| `Phone` | `string` | `Phone TEXT NOT NULL` | Không | Số điện thoại liên hệ. |
+| `Email` | `string?` | `Email TEXT NULL` | Có | Email; không bắt buộc. |
+| `Address` | `string?` | `Address TEXT NULL` | Có | Địa chỉ; không bắt buộc. |
+| `CreatedAt` | `DateTime` | `CreatedAt TEXT NOT NULL` | Không | Thời điểm tạo hồ sơ; mặc định thời gian địa phương của SQLite. |
+| `IsActive` | `bool` | `IsActive INTEGER NOT NULL DEFAULT 1` | Không | Hồ sơ đang hoạt động hay đã ngừng sử dụng. |
 
-**Ràng buộc:** đề xuất tạo unique index trên cặp `(IdentityType, IdentityNumber)` để tránh lưu cùng một giấy tờ nhiều lần.
+**Ràng buộc:** `UNIQUE (IdentityType, IdentityNumber)` – không lưu trùng cùng một số giấy tờ cùng loại.
 
-**Quan hệ:** một Customer có thể có nhiều Reservation và nhiều Stay.
+**Quan hệ:**
+
+- Một Customer có thể có nhiều Reservation.
+- Một Customer có thể có nhiều Stay theo thời gian.
+
+**Quy tắc:**
+
+- Tìm khách theo số giấy tờ, điện thoại hoặc tên trước khi tạo hồ sơ mới.
+- Không kết nối dịch vụ xác minh CCCD/hộ chiếu bên ngoài.
+- Không xóa khách đã có Reservation/Stay; có thể ngừng hoạt động bằng `IsActive = false`.
+
+---
 
 ## 3.5. `Reservation` – Đặt phòng
 
-**Mục đích:** lưu yêu cầu đặt phòng trước khi khách nhận phòng.
+**File:** `Entities/Reservation.cs`  
+**Bảng:** `Reservation`
 
-| Thuộc tính C# | Kiểu C# | Cột SQL đề xuất | Bắt buộc | Mô tả |
+**Mục đích:** Lưu yêu cầu đặt phòng trước. Nhân viên lễ tân nhập dữ liệu trực tiếp; khách không tự đặt phòng qua website hoặc API.
+
+| Property C# | Kiểu C# | Cột SQLite | Null? | Mô tả |
 |---|---|---|---|---|
-| `ReservationId` | `int` | `ReservationId INT IDENTITY` | PK | Khóa chính. |
-| `ReservationCode` | `string` | `ReservationCode VARCHAR(30)` | Có, unique | Mã đặt phòng. |
-| `CustomerId` | `int` | `CustomerId INT` | FK, có | Khách đặt phòng. |
-| `RoomTypeId` | `int` | `RoomTypeId INT` | FK, có | Loại phòng được yêu cầu. |
-| `RoomId` | `int?` | `RoomId INT NULL` | FK, không | Phòng cụ thể được giữ trước; null nếu chỉ đặt theo loại. |
-| `ExpectedCheckIn` | `DateTime` | `ExpectedCheckIn DATETIME2` | Có | Thời điểm dự kiến đến. |
-| `ExpectedCheckOut` | `DateTime` | `ExpectedCheckOut DATETIME2` | Có | Thời điểm dự kiến đi. |
-| `DepositAmount` | `decimal` | `DepositAmount DECIMAL(18,0)` | Có | Tiền cọc đã nhận, mặc định 0. |
-| `Note` | `string?` | `Note NVARCHAR(500)` | Không | Ghi chú. |
-| `Status` | `ReservationStatus` | `Status VARCHAR(20)` | Có | Trạng thái đặt phòng. |
-| `CreatedAt` | `DateTime` | `CreatedAt DATETIME2` | Có | Ngày tạo. |
+| `ReservationId` | `int` | `ReservationId INTEGER PRIMARY KEY AUTOINCREMENT` | Không | Khóa chính tự tăng. |
+| `ReservationCode` | `string` | `ReservationCode TEXT NOT NULL UNIQUE` | Không | Mã đặt phòng duy nhất. |
+| `CustomerId` | `int` | `CustomerId INTEGER NOT NULL` | Không | Khóa ngoại đến khách đặt phòng. |
+| `RoomTypeId` | `int` | `RoomTypeId INTEGER NOT NULL` | Không | Loại phòng khách yêu cầu. |
+| `RoomId` | `int?` | `RoomId INTEGER NULL` | Có | Phòng vật lý được giữ trước; `null` nếu chỉ đặt theo loại. |
+| `ExpectedCheckIn` | `DateTime` | `ExpectedCheckIn TEXT NOT NULL` | Không | Thời điểm dự kiến đến. |
+| `ExpectedCheckOut` | `DateTime` | `ExpectedCheckOut TEXT NOT NULL` | Không | Thời điểm dự kiến đi. |
+| `DepositAmount` | `decimal` | `DepositAmount INTEGER NOT NULL DEFAULT 0` | Không | Tiền cọc thực tế đã nhận, đơn vị VND. |
+| `Note` | `string?` | `Note TEXT NULL` | Có | Ghi chú đặt phòng. |
+| `Status` | `ReservationStatus` | `Status TEXT NOT NULL DEFAULT 'Confirmed'` | Không | Trạng thái đặt phòng. |
+| `CreatedAt` | `DateTime` | `CreatedAt TEXT NOT NULL` | Không | Thời điểm tạo đặt phòng. |
 
-**Quan hệ:**
+**Khóa ngoại:**
 
-- Một Reservation thuộc một Customer và một RoomType.
-- Có thể được gán một Room cụ thể (`RoomId` nullable).
-- Một Reservation chỉ có tối đa một Stay được tạo từ lần check-in.
+- `CustomerId` → `Customer.CustomerId`, `ON DELETE RESTRICT`.
+- `RoomTypeId` → `RoomType.RoomTypeId`, `ON DELETE RESTRICT`.
+- `RoomId` → `Room.RoomId`, `ON DELETE SET NULL`.
 
-**Lưu ý quan trọng:** đặt phòng theo loại phòng nhưng chưa gán phòng cụ thể không chuyển bất kỳ Room nào sang `RESERVED`. Khi check-in, nhân viên chọn phòng cùng loại còn trống.
+**Quan hệ:** một Reservation thuộc một Customer và một RoomType; có thể gán một Room cụ thể; một Reservation tạo tối đa một Stay.
+
+**Quy tắc:**
+
+- `ExpectedCheckOut > ExpectedCheckIn`.
+- `DepositAmount >= 0`.
+- Nếu `RoomId = null`, Reservation chỉ giữ chỗ theo loại phòng; không đổi trạng thái phòng nào thành `Reserved`.
+- Nếu `RoomId` có giá trị, phòng phải đúng loại và không bị trùng lịch với Reservation/Stay khác.
+- Khi chuyển sang check-in, tạo Stay gắn `ReservationId` và cập nhật Reservation sang `CheckedIn` trong cùng transaction.
+- Hủy đặt phòng chuyển `Status = Cancelled`; không xóa cứng.
+
+---
 
 ## 3.6. `Stay` – Lượt lưu trú
 
-**Mục đích:** ghi nhận một lần khách thực tế ở tại phòng. Đây là bản ghi trung tâm để ghi dịch vụ và lập hóa đơn.
+**File:** `Entities/Stay.cs`  
+**Bảng:** `Stay`
 
-| Thuộc tính C# | Kiểu C# | Cột SQL đề xuất | Bắt buộc | Mô tả |
+**Mục đích:** Ghi nhận một lượt khách ở thực tế. Đây là đối tượng trung tâm dùng để ghi nhận dịch vụ, checkout và lập hóa đơn.
+
+| Property C# | Kiểu C# | Cột SQLite | Null? | Mô tả |
 |---|---|---|---|---|
-| `StayId` | `int` | `StayId INT IDENTITY` | PK | Khóa chính. |
-| `ReservationId` | `int?` | `ReservationId INT NULL` | FK, không | Có giá trị nếu check-in từ đặt phòng; null với khách vãng lai. |
-| `CustomerId` | `int` | `CustomerId INT` | FK, có | Khách đang lưu trú. |
-| `RoomId` | `int` | `RoomId INT` | FK, có | Phòng thực tế được nhận. |
-| `ActualCheckIn` | `DateTime` | `ActualCheckIn DATETIME2` | Có | Thời điểm check-in thực tế. |
-| `ExpectedCheckOut` | `DateTime` | `ExpectedCheckOut DATETIME2` | Có | Ngày/giờ dự kiến trả phòng; có thể lấy từ Reservation hoặc nhập cho khách vãng lai. |
-| `ActualCheckOut` | `DateTime?` | `ActualCheckOut DATETIME2 NULL` | Không | Thời điểm trả phòng thực tế. |
-| `GuestCount` | `int` | `GuestCount INT` | Có | Số khách thực tế. |
-| `HourlyRateAtCheckIn` | `decimal` | `HourlyRateAtCheckIn DECIMAL(18,0)` | Có | Giá giờ được chụp tại check-in. |
-| `DailyRateAtCheckIn` | `decimal` | `DailyRateAtCheckIn DECIMAL(18,0)` | Có | Giá ngày được chụp tại check-in. |
-| `Status` | `StayStatus` | `Status VARCHAR(20)` | Có | `IN_PROGRESS`, `CHECKOUT_PENDING` hoặc `COMPLETED`. |
-| `Note` | `string?` | `Note NVARCHAR(500)` | Không | Ghi chú. |
+| `StayId` | `int` | `StayId INTEGER PRIMARY KEY AUTOINCREMENT` | Không | Khóa chính tự tăng. |
+| `ReservationId` | `int?` | `ReservationId INTEGER NULL` | Có | Reservation nguồn; `null` với khách vãng lai. |
+| `CustomerId` | `int` | `CustomerId INTEGER NOT NULL` | Không | Khóa ngoại đến khách đang lưu trú. |
+| `RoomId` | `int` | `RoomId INTEGER NOT NULL` | Không | Khóa ngoại đến phòng thực tế. |
+| `ActualCheckIn` | `DateTime` | `ActualCheckIn TEXT NOT NULL` | Không | Thời điểm check-in thực tế. |
+| `ExpectedCheckOut` | `DateTime` | `ExpectedCheckOut TEXT NOT NULL` | Không | Thời điểm dự kiến checkout. |
+| `ActualCheckOut` | `DateTime?` | `ActualCheckOut TEXT NULL` | Có | Thời điểm checkout thực tế; chưa checkout thì `null`. |
+| `GuestCount` | `int` | `GuestCount INTEGER NOT NULL` | Không | Số khách thực tế trong phòng. |
+| `HourlyRateAtCheckIn` | `decimal` | `HourlyRateAtCheckIn INTEGER NOT NULL` | Không | Giá giờ được chụp tại thời điểm check-in, đơn vị VND. |
+| `DailyRateAtCheckIn` | `decimal` | `DailyRateAtCheckIn INTEGER NOT NULL` | Không | Giá ngày được chụp tại thời điểm check-in, đơn vị VND. |
+| `Status` | `StayStatus` | `Status TEXT NOT NULL DEFAULT 'InProgress'` | Không | Trạng thái lượt lưu trú. |
+| `Note` | `string?` | `Note TEXT NULL` | Có | Ghi chú lượt lưu trú. |
 
-**Quan hệ:**
+**Khóa ngoại:**
 
-- Một Stay thuộc một Customer và một Room.
-- Một Stay có thể xuất phát từ Reservation hoặc là khách vãng lai.
-- Một Stay có nhiều StayService và tối đa một Invoice.
+- `ReservationId` → `Reservation.ReservationId`, `ON DELETE RESTRICT`.
+- `CustomerId` → `Customer.CustomerId`, `ON DELETE RESTRICT`.
+- `RoomId` → `Room.RoomId`, `ON DELETE RESTRICT`.
 
-**Quy tắc:** chỉ Stay `IN_PROGRESS` mới được ghi thêm dịch vụ hoặc checkout.
+**Index/Unique:** index `UX_Stay_Reservation` là unique có điều kiện `ReservationId IS NOT NULL`, giúp một Reservation chỉ tạo tối đa một Stay. Các index `IX_Stay_Room_Status` và `IX_Stay_Customer` hỗ trợ tra cứu.
+
+**Quy tắc:**
+
+- `GuestCount > 0`.
+- `ExpectedCheckOut > ActualCheckIn`.
+- `ActualCheckOut` nếu có phải lớn hơn hoặc bằng `ActualCheckIn`.
+- Số khách không vượt `RoomType.MaxOccupancy`; đây là kiểm tra nghiệp vụ Service vì cần đọc RoomType.
+- Một phòng không được có hai Stay `InProgress` đồng thời. Source hiện có index tra cứu theo Room/Status; Service phải kiểm tra và dùng transaction để bảo đảm quy tắc này.
+- Khi check-in, sao chép hai mức giá từ RoomType sang Stay để bảo toàn lịch sử giá.
+- Chỉ Stay `InProgress` được ghi dịch vụ mới.
+- Checkout được xác nhận thanh toán: Stay chuyển `CheckoutPending`; sau khi in mô phỏng: Stay chuyển `Completed`.
+
+---
 
 ## 3.7. `HotelService` – Danh mục dịch vụ
 
-**Mục đích:** định nghĩa các dịch vụ khách sạn có thu phí.
+**File:** `Entities/HotelService.cs`  
+**Bảng:** `HotelService`
 
-| Thuộc tính C# | Kiểu C# | Cột SQL đề xuất | Bắt buộc | Mô tả |
+**Mục đích:** Lưu những dịch vụ nội bộ có thể tính phí cho khách. Không tích hợp đối tác thuê xe, giặt ủi hoặc nhà hàng.
+
+| Property C# | Kiểu C# | Cột SQLite | Null? | Mô tả |
 |---|---|---|---|---|
-| `ServiceId` | `int` | `ServiceId INT IDENTITY` | PK | Khóa chính. |
-| `ServiceCode` | `string` | `ServiceCode VARCHAR(30)` | Có, unique | Mã dịch vụ. |
-| `ServiceName` | `string` | `ServiceName NVARCHAR(150)` | Có | Tên dịch vụ. |
-| `Category` | `ServiceCategory` | `Category VARCHAR(30)` | Có | Đồ uống, giặt ủi, thuê xe, khác. |
-| `UnitName` | `string` | `UnitName NVARCHAR(30)` | Có | Đơn vị tính: ly, kg, lượt, giờ,... |
-| `UnitPrice` | `decimal` | `UnitPrice DECIMAL(18,0)` | Có | Đơn giá hiện tại. |
-| `Description` | `string?` | `Description NVARCHAR(300)` | Không | Mô tả. |
-| `IsActive` | `bool` | `IsActive BIT` | Có | Còn cung cấp hay không. |
+| `ServiceId` | `int` | `ServiceId INTEGER PRIMARY KEY AUTOINCREMENT` | Không | Khóa chính tự tăng. |
+| `ServiceCode` | `string` | `ServiceCode TEXT NOT NULL UNIQUE` | Không | Mã dịch vụ duy nhất. |
+| `ServiceName` | `string` | `ServiceName TEXT NOT NULL` | Không | Tên dịch vụ. |
+| `Category` | `ServiceCategory` | `Category TEXT NOT NULL` | Không | Nhóm dịch vụ. |
+| `UnitName` | `string` | `UnitName TEXT NOT NULL` | Không | Đơn vị tính: chai, lon, kg, lượt,... |
+| `UnitPrice` | `decimal` | `UnitPrice INTEGER NOT NULL` | Không | Đơn giá hiện tại, đơn vị VND. |
+| `Description` | `string?` | `Description TEXT NULL` | Có | Mô tả dịch vụ. |
+| `IsActive` | `bool` | `IsActive INTEGER NOT NULL DEFAULT 1` | Không | Còn cung cấp hay đã ngừng. |
 
-**Quan hệ:** một HotelService có thể xuất hiện trong nhiều StayService.
+**Nhóm dịch vụ (`ServiceCategory`):** `FoodDrink`, `Laundry`, `Transport`, `Other`.
+
+**Quan hệ:** một HotelService có thể được tham chiếu bởi nhiều StayService.
+
+**Quy tắc:**
+
+- `ServiceCode` không trùng.
+- `UnitPrice >= 0`.
+- Khi dịch vụ đã được sử dụng trong lịch sử, không xóa cứng; dùng `IsActive = false`.
+- `Transport` chỉ là khoản dịch vụ nhân viên ghi nhận thủ công; không kết nối nhà cung cấp hoặc đối tác.
+
+---
 
 ## 3.8. `StayService` – Dịch vụ phát sinh trong lượt lưu trú
 
-**Mục đích:** lưu chi tiết từng lần khách sử dụng dịch vụ.
+**File:** `Entities/StayService.cs`  
+**Bảng:** `StayService`
 
-| Thuộc tính C# | Kiểu C# | Cột SQL đề xuất | Bắt buộc | Mô tả |
+**Mục đích:** Lưu một dòng dịch vụ khách sử dụng trong một lượt Stay. Mỗi lần sử dụng có thể tạo một bản ghi riêng.
+
+| Property C# | Kiểu C# | Cột SQLite | Null? | Mô tả |
 |---|---|---|---|---|
-| `StayServiceId` | `int` | `StayServiceId INT IDENTITY` | PK | Khóa chính. |
-| `StayId` | `int` | `StayId INT` | FK, có | Lượt lưu trú phát sinh dịch vụ. |
-| `ServiceId` | `int` | `ServiceId INT` | FK, có | Dịch vụ được chọn. |
-| `Quantity` | `decimal` | `Quantity DECIMAL(18,2)` | Có | Số lượng sử dụng. |
-| `UnitPrice` | `decimal` | `UnitPrice DECIMAL(18,0)` | Có | Đơn giá tại thời điểm ghi nhận. |
-| `Amount` | `decimal` | `Amount DECIMAL(18,0)` | Có | Thành tiền = Quantity × UnitPrice, được tính và lưu khi ghi nhận. |
-| `UsedAt` | `DateTime` | `UsedAt DATETIME2` | Có | Thời điểm phát sinh. |
-| `Note` | `string?` | `Note NVARCHAR(300)` | Không | Ghi chú. |
+| `StayServiceId` | `int` | `StayServiceId INTEGER PRIMARY KEY AUTOINCREMENT` | Không | Khóa chính tự tăng. |
+| `StayId` | `int` | `StayId INTEGER NOT NULL` | Không | Khóa ngoại đến lượt lưu trú. |
+| `ServiceId` | `int` | `ServiceId INTEGER NOT NULL` | Không | Khóa ngoại đến danh mục dịch vụ. |
+| `Quantity` | `decimal` | `Quantity TEXT NOT NULL` | Không | Số lượng dùng; lưu dạng text invariant để giữ phần thập phân. |
+| `UnitPrice` | `decimal` | `UnitPrice INTEGER NOT NULL` | Không | Đơn giá được chụp tại thời điểm dùng, đơn vị VND. |
+| `Amount` | `decimal` | `Amount INTEGER NOT NULL` | Không | Thành tiền đã tính và lưu, đơn vị VND. |
+| `UsedAt` | `DateTime` | `UsedAt TEXT NOT NULL` | Không | Thời điểm sử dụng; mặc định thời gian địa phương của SQLite. |
+| `Note` | `string?` | `Note TEXT NULL` | Có | Ghi chú dòng dịch vụ. |
 
-**Quy tắc:** không cập nhật `UnitPrice` theo giá danh mục sau khi đã ghi nhận. Dữ liệu StayService của Stay đã hoàn tất không được sửa trong MVP.
+**Khóa ngoại:**
+
+- `StayId` → `Stay.StayId`, `ON DELETE RESTRICT`.
+- `ServiceId` → `HotelService.ServiceId`, `ON DELETE RESTRICT`.
+
+**Index:** `IX_StayService_Stay_UsedAt` hỗ trợ lấy các khoản dịch vụ theo Stay và thời điểm sử dụng.
+
+**Quy tắc:**
+
+- Chỉ Stay `InProgress` được thêm dịch vụ.
+- `Quantity > 0`, `UnitPrice >= 0`.
+- `Amount = Quantity × UnitPrice`; Service tính và lưu thành tiền.
+- `UnitPrice` phải lấy từ HotelService tại thời điểm thêm và không thay đổi khi giá danh mục được cập nhật sau này.
+- StayService không tự xóa khi đổi giá dịch vụ; dữ liệu lịch sử được giữ nguyên.
+
+---
 
 ## 3.9. `Invoice` – Hóa đơn
 
-**Mục đích:** chốt tổng chi phí của một lượt lưu trú.
+**File:** `Entities/Invoice.cs`  
+**Bảng:** `Invoice`
 
-| Thuộc tính C# | Kiểu C# | Cột SQL đề xuất | Bắt buộc | Mô tả |
+**Mục đích:** Chốt số tiền của một lượt lưu trú, gồm tiền phòng, tiền dịch vụ, tiền cọc được trừ và số tiền cần thu/hoàn.
+
+| Property C# | Kiểu C# | Cột SQLite | Null? | Mô tả |
 |---|---|---|---|---|
-| `InvoiceId` | `int` | `InvoiceId INT IDENTITY` | PK | Khóa chính. |
-| `InvoiceCode` | `string` | `InvoiceCode VARCHAR(30)` | Có, unique | Mã hóa đơn. |
-| `StayId` | `int` | `StayId INT` | FK, unique | Một Stay chỉ có tối đa một hóa đơn. |
-| `CreatedAt` | `DateTime` | `CreatedAt DATETIME2` | Có | Thời điểm lập hóa đơn. |
-| `ChargeBasis` | `ChargeBasis` | `ChargeBasis VARCHAR(10)` | Có | Cách tính tiền phòng: `HOUR` hoặc `DAY`. |
-| `ChargedUnits` | `int` | `ChargedUnits INT` | Có | Số giờ/ngày tính tiền sau khi làm tròn. |
-| `AppliedRate` | `decimal` | `AppliedRate DECIMAL(18,0)` | Có | Đơn giá giờ/ngày được áp dụng. |
-| `RoomCharge` | `decimal` | `RoomCharge DECIMAL(18,0)` | Có | Tiền phòng. |
-| `ServiceCharge` | `decimal` | `ServiceCharge DECIMAL(18,0)` | Có | Tổng tiền dịch vụ. |
-| `SubTotal` | `decimal` | `SubTotal DECIMAL(18,0)` | Có | RoomCharge + ServiceCharge. |
-| `DepositDeducted` | `decimal` | `DepositDeducted DECIMAL(18,0)` | Có | Tiền cọc được trừ. |
-| `AmountDue` | `decimal` | `AmountDue DECIMAL(18,0)` | Có | Số tiền khách cần thanh toán thêm. |
-| `RefundDue` | `decimal` | `RefundDue DECIMAL(18,0)` | Có | Tiền cần hoàn lại nếu cọc lớn hơn chi phí. |
-| `Status` | `InvoiceStatus` | `Status VARCHAR(20)` | Có | `UNPAID` hoặc `PAID`. |
-| `PrintedAt` | `DateTime?` | `PrintedAt DATETIME2 NULL` | Không | Thời điểm bấm In mô phỏng. |
+| `InvoiceId` | `int` | `InvoiceId INTEGER PRIMARY KEY AUTOINCREMENT` | Không | Khóa chính tự tăng. |
+| `InvoiceCode` | `string` | `InvoiceCode TEXT NOT NULL UNIQUE` | Không | Mã hóa đơn duy nhất. |
+| `StayId` | `int` | `StayId INTEGER NOT NULL UNIQUE` | Không | Khóa ngoại đến Stay; mỗi Stay tối đa một Invoice. |
+| `CreatedAt` | `DateTime` | `CreatedAt TEXT NOT NULL` | Không | Thời điểm lập hóa đơn. |
+| `ChargeBasis` | `ChargeBasis` | `ChargeBasis TEXT NOT NULL` | Không | Cách tính tiền phòng: `Hour` hoặc `Day`. |
+| `ChargedUnits` | `int` | `ChargedUnits INTEGER NOT NULL` | Không | Số giờ/ngày tính tiền sau làm tròn; phải > 0. |
+| `AppliedRate` | `decimal` | `AppliedRate INTEGER NOT NULL` | Không | Đơn giá được áp dụng, đơn vị VND. |
+| `RoomCharge` | `decimal` | `RoomCharge INTEGER NOT NULL` | Không | Tiền phòng. |
+| `ServiceCharge` | `decimal` | `ServiceCharge INTEGER NOT NULL` | Không | Tổng tiền dịch vụ. |
+| `SubTotal` | `decimal` | `SubTotal INTEGER NOT NULL` | Không | Tổng trước khi trừ cọc: RoomCharge + ServiceCharge. |
+| `DepositDeducted` | `decimal` | `DepositDeducted INTEGER NOT NULL` | Không | Số tiền cọc được trừ vào hóa đơn. |
+| `AmountDue` | `decimal` | `AmountDue INTEGER NOT NULL` | Không | Số tiền khách cần thanh toán thêm. |
+| `RefundDue` | `decimal` | `RefundDue INTEGER NOT NULL` | Không | Số tiền cần hoàn nếu tiền cọc lớn hơn chi phí. |
+| `Status` | `InvoiceStatus` | `Status TEXT NOT NULL DEFAULT 'Unpaid'` | Không | Trạng thái hóa đơn. |
+| `PrintedAt` | `DateTime?` | `PrintedAt TEXT NULL` | Có | Thời điểm hoàn tất thao tác in mô phỏng. |
 
-**Quan hệ:** một Invoice thuộc một Stay và có thể có nhiều Payment (nếu sau này cho phép thanh toán nhiều lần; MVP chỉ cần một lần).
+**Ràng buộc SQLite:**
 
-**Lưu ý:** không cần bảng `InvoiceDetail` riêng trong MVP vì chi tiết dịch vụ được truy xuất từ `StayService`; tiền phòng được lưu trực tiếp trong Invoice.
+- `InvoiceCode` là duy nhất.
+- `StayId` là duy nhất và tham chiếu `Stay.StayId`.
+- `ChargedUnits > 0`; các trường tiền không âm.
+- `SubTotal = RoomCharge + ServiceCharge`.
+- `DepositDeducted <= SubTotal`.
+- `Status` chỉ nhận `Unpaid` hoặc `Paid`.
+
+**Quan hệ:** một Invoice thuộc đúng một Stay; một Stay có tối đa một Invoice. Invoice có thể có nhiều Payment theo cấu trúc bảng Payment hiện tại.
+
+**Công thức tính tiền:**
+
+Gọi `H` là tổng số giờ lưu trú thực tế, làm tròn lên đến giờ nguyên gần nhất.
+
+- Nếu `ChargeBasis = Hour`: `ChargedUnits = max(1, ceil(H))`; `RoomCharge = ChargedUnits × HourlyRateAtCheckIn`.
+- Nếu `ChargeBasis = Day`: `ChargedUnits = max(1, ceil(H / 24))`; `RoomCharge = ChargedUnits × DailyRateAtCheckIn`.
+- `ServiceCharge = tổng Amount của StayService thuộc Stay`.
+- `SubTotal = RoomCharge + ServiceCharge`.
+- `DepositAmount` lấy từ Reservation nếu Stay có Reservation; khách vãng lai không có Reservation thì tiền cọc mặc định bằng 0.
+- `DepositDeducted = min(DepositAmount, SubTotal)`.
+- `AmountDue = max(0, SubTotal - DepositAmount)`.
+- `RefundDue = max(0, DepositAmount - SubTotal)`.
+
+**Luồng trạng thái:** sau khi xác nhận thanh toán mô phỏng, Invoice chuyển `Paid`; Stay chuyển `CheckoutPending`. Sau khi bấm In mô phỏng, cập nhật `PrintedAt`, Stay chuyển `Completed`, Reservation liên quan chuyển `Completed`, Room chuyển `Cleaning`.
+
+> Chi tiết các dòng dịch vụ được lấy từ `StayService` theo `StayId`; không cần bảng `InvoiceDetail` riêng trong phạm vi MVP.
+
+---
 
 ## 3.10. `Payment` – Giao dịch thanh toán mô phỏng
 
-**Mục đích:** ghi nhận việc lễ tân bấm xác nhận thanh toán trong ứng dụng offline.
+**File:** `Entities/Payment.cs`  
+**Bảng:** `Payment`
 
-| Thuộc tính C# | Kiểu C# | Cột SQL đề xuất | Bắt buộc | Mô tả |
+**Mục đích:** Ghi nhận việc lễ tân xác nhận thanh toán trong ứng dụng offline. Đây là bản ghi nội bộ, không đại diện giao dịch ngân hàng hoặc cổng thanh toán.
+
+| Property C# | Kiểu C# | Cột SQLite | Null? | Mô tả |
 |---|---|---|---|---|
-| `PaymentId` | `int` | `PaymentId INT IDENTITY` | PK | Khóa chính. |
-| `InvoiceId` | `int` | `InvoiceId INT` | FK, có | Hóa đơn được thanh toán. |
-| `PaymentCode` | `string` | `PaymentCode VARCHAR(30)` | Có, unique | Mã giao dịch nội bộ. |
-| `Amount` | `decimal` | `Amount DECIMAL(18,0)` | Có | Số tiền đã xác nhận thu. |
-| `Method` | `PaymentMethod` | `Method VARCHAR(20)` | Có | MVP dùng `CASH` hoặc `SIMULATED`; không kết nối bên thứ ba. |
-| `Status` | `PaymentStatus` | `Status VARCHAR(20)` | Có | MVP ghi `COMPLETED` sau thao tác xác nhận. |
-| `PaidAt` | `DateTime` | `PaidAt DATETIME2` | Có | Thời điểm xác nhận thanh toán. |
-| `Note` | `string?` | `Note NVARCHAR(300)` | Không | Ghi chú. |
+| `PaymentId` | `int` | `PaymentId INTEGER PRIMARY KEY AUTOINCREMENT` | Không | Khóa chính tự tăng. |
+| `InvoiceId` | `int` | `InvoiceId INTEGER NOT NULL` | Không | Khóa ngoại đến hóa đơn. |
+| `PaymentCode` | `string` | `PaymentCode TEXT NOT NULL UNIQUE` | Không | Mã giao dịch nội bộ duy nhất. |
+| `Amount` | `decimal` | `Amount INTEGER NOT NULL` | Không | Số tiền được xác nhận thu; phải > 0. |
+| `Method` | `PaymentMethod` | `Method TEXT NOT NULL` | Không | `Cash` hoặc `Simulated`. |
+| `Status` | `PaymentStatus` | `Status TEXT NOT NULL DEFAULT 'Completed'` | Không | Hiện chỉ có `Completed`. |
+| `PaidAt` | `DateTime` | `PaidAt TEXT NOT NULL` | Không | Thời điểm xác nhận thanh toán. |
+| `Note` | `string?` | `Note TEXT NULL` | Có | Ghi chú giao dịch. |
 
-**Quan hệ:** nhiều Payment có thể thuộc một Invoice theo thiết kế để mở rộng; trong MVP chỉ tạo một Payment cho số tiền còn phải thu khi bấm Thanh toán. Nếu `AmountDue = 0`, vẫn có thể đánh dấu hóa đơn đã hoàn tất mà không cần tạo giao dịch thu tiền bằng 0.
+**Khóa ngoại:** `InvoiceId` → `Invoice.InvoiceId`, `ON DELETE RESTRICT`.
+
+**Ràng buộc SQLite:**
+
+- `PaymentCode` là duy nhất.
+- `Amount > 0`.
+- `Method` chỉ nhận `Cash` hoặc `Simulated`.
+- `Status` hiện chỉ nhận `Completed`.
+- Có index `IX_Payment_Invoice_PaidAt` trên `(InvoiceId, PaidAt)`.
+
+**Quan hệ và giới hạn hiện tại:** một Invoice có thể có nhiều Payment theo schema vì `Payment.InvoiceId` chưa có ràng buộc UNIQUE. MVP dự kiến thường chỉ tạo một Payment cho khoản phải thu; nếu nhóm muốn Database bắt buộc một Payment cho mỗi Invoice thì phải thống nhất và bổ sung unique index trong migration/schema, không được mô tả rằng ràng buộc đó đã tồn tại.
+
+Nếu `Invoice.AmountDue = 0`, có thể hoàn tất hóa đơn mà không tạo Payment có Amount bằng 0 vì schema hiện yêu cầu `Amount > 0`.
 
 ---
 
 ## 4. Enum dùng chung
 
-Các giá trị enum phải thống nhất giữa C#, SQL seed data và logic dịch vụ. Nên lưu chuỗi enum tương ứng trong SQL để dễ đọc/debug.
+Các Enum nằm trong `src/HotelManagement.Core/Enums/`. Khi lưu xuống SQLite, dùng đúng tên thành viên enum dạng chuỗi; không tự chuyển sang số hoặc tự đổi cách viết.
 
 ### 4.1. `RoomStatus`
 
-| Giá trị | Màu giao diện | Ý nghĩa |
+**File:** `Enums/RoomStatus.cs`
+
+| Giá trị | Ý nghĩa | Màu Dashboard |
 |---|---|---|
-| `Available` | Xanh lá | Phòng sạch, sẵn sàng nhận khách. |
-| `Reserved` | Cam | Phòng đã gán cho đặt phòng còn hiệu lực. |
-| `Occupied` | Đỏ | Phòng đang có khách. |
-| `Cleaning` | Vàng | Phòng đang được dọn sau checkout. |
+| `Available` | Phòng sạch, sẵn sàng nhận khách. | Xanh lá |
+| `Reserved` | Phòng đã được gán cho Reservation còn hiệu lực. | Cam |
+| `Occupied` | Phòng đang có khách. | Đỏ |
+| `Cleaning` | Phòng đang chờ dọn xong sau checkout. | Vàng |
 
 ### 4.2. `ReservationStatus`
 
+**File:** `Enums/ReservationStatus.cs`
+
 | Giá trị | Ý nghĩa |
 |---|---|
-| `Confirmed` | Đặt phòng đã xác nhận. |
-| `CheckedIn` | Khách đã nhận phòng. |
-| `Completed` | Đã trả phòng. |
-| `Cancelled` | Đã hủy. |
-| `NoShow` | Khách không đến; không bắt buộc triển khai trong MVP. |
+| `Confirmed` | Đặt phòng được lưu và còn hiệu lực. |
+| `CheckedIn` | Khách đã nhận phòng từ Reservation này. |
+| `Completed` | Lượt đặt phòng đã hoàn tất checkout. |
+| `Cancelled` | Đặt phòng đã hủy. |
+| `NoShow` | Khách không đến; có trong enum/schema hiện tại nhưng không bắt buộc triển khai luồng riêng trong MVP. |
 
 ### 4.3. `StayStatus`
 
-- `InProgress`: khách đang lưu trú và có thể ghi nhận dịch vụ.
-- `CheckoutPending`: đã xác nhận thanh toán, đang chờ in mô phỏng để hoàn tất; không cho phép ghi dịch vụ mới.
-- `Completed`: đã hoàn tất trả phòng.
+**File:** `Enums/StayStatus.cs`
+
+| Giá trị | Ý nghĩa |
+|---|---|
+| `InProgress` | Khách đang lưu trú; có thể ghi nhận dịch vụ và checkout. |
+| `CheckoutPending` | Đã xác nhận thanh toán; chờ in mô phỏng để hoàn tất; không cho ghi dịch vụ mới. |
+| `Completed` | Đã hoàn tất checkout và thao tác in mô phỏng. |
 
 ### 4.4. `IdentityType`
 
-- `CCCD`
-- `Passport`
+**File:** `Enums/IdentityType.cs`
+
+- `CCCD`: Căn cước công dân.
+- `Passport`: Hộ chiếu.
 
 ### 4.5. `ServiceCategory`
 
-- `FoodDrink`
-- `Laundry`
-- `Transport`
-- `Other`
+**File:** `Enums/ServiceCategory.cs`
+
+| Giá trị | Ý nghĩa |
+|---|---|
+| `FoodDrink` | Đồ ăn/đồ uống. |
+| `Laundry` | Giặt ủi. |
+| `Transport` | Khoản dịch vụ vận chuyển/thuê xe do nhân viên ghi nhận thủ công; không kết nối đối tác. |
+| `Other` | Dịch vụ nội bộ khác. |
 
 ### 4.6. `InvoiceStatus`
 
-- `Unpaid`
-- `Paid`
+**File:** `Enums/InvoiceStatus.cs`
+
+- `Unpaid`: Hóa đơn chưa xác nhận thanh toán.
+- `Paid`: Đã xác nhận thanh toán mô phỏng.
 
 ### 4.7. `ChargeBasis`
 
-- `Hour`: tính tiền theo giờ.
-- `Day`: tính tiền theo ngày.
+**File:** `Enums/ChargeBasis.cs`
+
+- `Hour`: Tính tiền phòng theo giờ.
+- `Day`: Tính tiền phòng theo ngày.
 
 ### 4.8. `PaymentMethod`
 
-- `Cash`
-- `Simulated`
+**File:** `Enums/PaymentMethod.cs`
+
+- `Cash`: Xác nhận thu tiền mặt tại quầy.
+- `Simulated`: Giao dịch thanh toán mô phỏng nội bộ; không gọi cổng thanh toán.
 
 ### 4.9. `PaymentStatus`
 
-- `Completed`
+**File:** `Enums/PaymentStatus.cs`
+
+- `Completed`: Giao dịch mô phỏng đã được ghi nhận hoàn tất.
 
 ---
 
-## 5. Ràng buộc dữ liệu và chỉ mục đề xuất
+## 5. Ánh xạ kiểu dữ liệu C# sang SQLite
 
-| Bảng | Ràng buộc / Index | Mục đích |
+SQLite sử dụng hệ kiểu lưu trữ linh hoạt. Để cả nhóm đọc/ghi dữ liệu nhất quán, áp dụng quy ước cụ thể sau:
+
+| Kiểu C# | Kiểu SQLite trong schema hiện tại | Quy tắc |
 |---|---|---|
-| `Floor` | UNIQUE(`FloorNumber`) | Không trùng số tầng. |
-| `RoomType` | UNIQUE(`TypeCode`) | Không trùng mã loại phòng. |
-| `Room` | UNIQUE(`RoomCode`); FK Floor; FK RoomType | Mã phòng duy nhất và tham chiếu hợp lệ. |
-| `Customer` | UNIQUE(`IdentityType`, `IdentityNumber`) | Không lưu trùng giấy tờ cùng loại. |
-| `Reservation` | UNIQUE(`ReservationCode`); index (`RoomId`, `ExpectedCheckIn`, `ExpectedCheckOut`, `Status`) | Tra cứu đặt phòng và kiểm tra lịch phòng. |
-| `Stay` | FK Room/Customer; UNIQUE(`ReservationId`) có lọc NULL nếu DB hỗ trợ filtered index; index (`RoomId`, `Status`) | Một đặt phòng tạo tối đa một Stay; tìm lượt lưu trú đang mở. |
-| `HotelService` | UNIQUE(`ServiceCode`) | Mã dịch vụ duy nhất. |
-| `StayService` | FK Stay/HotelService; index (`StayId`) | Tải dịch vụ của một lượt lưu trú. |
-| `Invoice` | UNIQUE(`InvoiceCode`); UNIQUE(`StayId`) | Không tạo hóa đơn trùng cho một Stay. |
-| `Payment` | UNIQUE(`PaymentCode`); UNIQUE(`InvoiceId`) trong MVP; FK Invoice | Ngăn ghi nhận thanh toán mô phỏng trùng khi người dùng bấm nút nhiều lần. |
+| `int` | `INTEGER` | Dùng cho ID, số tầng, số lượng nguyên và số đơn vị tính tiền. |
+| `string` / `string?` | `TEXT` | Chuỗi Unicode; property nullable tương ứng cột `NULL`. |
+| `bool` | `INTEGER` | `0 = false`, `1 = true`; cột IsActive có CHECK. |
+| `DateTime` / `DateTime?` | `TEXT` | Lưu theo định dạng thống nhất; không trộn chuỗi ngày giờ tùy ý. |
+| `decimal` dùng cho tiền VND | `INTEGER` | Lưu số đồng nguyên; chuyển đổi qua `SqliteValueConverter`. |
+| `decimal` của `Quantity` | `TEXT` | Lưu chuỗi invariant để giữ phần thập phân; chuyển đổi qua `SqliteValueConverter`. |
+| Enum | `TEXT` | Lưu tên thành viên enum, ví dụ `Available`, `Unpaid`, `CCCD`. |
 
-### 5.1. Check trùng lịch phòng
+### 5.1. `SqliteValueConverter`
 
-Với một phòng và khoảng thời gian mới `[NewStart, NewEnd)`, phải kiểm tra Reservation chưa hủy và Stay đang hoạt động có giao nhau hay không. Hai khoảng thời gian giao nhau khi:
+File hiện tại: `src/HotelManagement.Infrastructure/Data/SqliteValueConverter.cs`.
+
+| Phương thức | Công dụng |
+|---|---|
+| `ToVnd(decimal amount)` | Chỉ chấp nhận số tiền nguyên đồng và chuyển thành `long` để lưu SQLite `INTEGER`. Nếu có phần thập phân thì ném lỗi. |
+| `FromVnd(SqliteDataReader reader, int ordinal)` | Đọc giá trị INTEGER và trả về `decimal` trong Entity. |
+| `ToDecimalText(decimal value)` | Chuyển decimal thành chuỗi invariant để lưu `Quantity` dạng TEXT. |
+| `FromDecimalText(SqliteDataReader reader, int ordinal)` | Đọc chuỗi và parse về decimal invariant. |
+
+**Không làm:**
+
+- Không dùng `double`/`REAL` để tính tiền.
+- Không nối chuỗi số theo Culture hiện tại của máy (ví dụ dùng dấu phẩy thập phân tùy ngôn ngữ).
+- Không ghi giá trị decimal trực tiếp vào cột tiền INTEGER mà bỏ qua converter.
+
+### 5.2. Ngày giờ
+
+- Schema hiện dùng `TEXT` cho các cột ngày giờ.
+- Seed data và default SQLite đang dùng dạng `yyyy-MM-dd HH:mm:ss` theo giờ địa phương.
+- Repository phải dùng cùng quy tắc chuyển đổi khi ghi và đọc `DateTime`.
+- Không trộn giờ UTC và giờ địa phương trong cùng một cột nếu chưa có quy ước chuyển đổi rõ ràng.
+
+---
+
+## 6. Ràng buộc, khóa ngoại và Index hiện tại
+
+### 6.1. Ràng buộc khai báo trong `02_CreateTables.sql`
+
+| Bảng | Ràng buộc |
+|---|---|
+| `Floor` | `FloorNumber` UNIQUE; `IsActive` chỉ nhận 0/1. |
+| `RoomType` | `TypeCode` UNIQUE; `MaxOccupancy > 0`; giá giờ/ngày không âm; `IsActive` chỉ nhận 0/1. |
+| `Room` | `RoomCode` UNIQUE; Status chỉ nhận bốn trạng thái; FK đến Floor và RoomType; `IsActive` chỉ nhận 0/1. |
+| `Customer` | IdentityType chỉ nhận `CCCD`/`Passport`; UNIQUE cặp `(IdentityType, IdentityNumber)`; `IsActive` chỉ nhận 0/1. |
+| `Reservation` | `ReservationCode` UNIQUE; tiền cọc không âm; ExpectedCheckOut > ExpectedCheckIn; Status thuộc tập đã chốt; FK Customer/RoomType/Room. |
+| `Stay` | GuestCount > 0; giá chụp tại check-in không âm; ExpectedCheckOut > ActualCheckIn; ActualCheckOut không trước ActualCheckIn; Status thuộc tập đã chốt; FK Reservation/Customer/Room. |
+| `HotelService` | `ServiceCode` UNIQUE; Category thuộc tập đã chốt; UnitPrice không âm; `IsActive` chỉ nhận 0/1. |
+| `StayService` | Quantity > 0; UnitPrice và Amount không âm; FK Stay/HotelService. |
+| `Invoice` | InvoiceCode UNIQUE; StayId UNIQUE; ChargedUnits > 0; các số tiền không âm; SubTotal = RoomCharge + ServiceCharge; DepositDeducted <= SubTotal; Status Unpaid/Paid; FK Stay. |
+| `Payment` | PaymentCode UNIQUE; Amount > 0; Method Cash/Simulated; Status Completed; FK Invoice. |
+
+### 6.2. Khóa ngoại và hành vi xóa
+
+- Các FK phần lớn dùng `ON DELETE RESTRICT` để không xóa bản ghi đang được lịch sử nghiệp vụ tham chiếu.
+- Riêng `Reservation.RoomId` dùng `ON DELETE SET NULL`: nếu Room bị xóa vật lý thì Reservation giữ lại nhưng bỏ liên kết phòng. Tuy vậy, quy tắc nghiệp vụ vẫn ưu tiên ngừng hoạt động bằng `IsActive` thay vì xóa.
+- `DbConnectionFactory` phải bật `ForeignKeys = true` cho mỗi kết nối. Nếu tắt Foreign Keys, SQLite sẽ không thực thi các quan hệ như mong muốn.
+
+### 6.3. Index trong `03_CreateConstraintsAndIndexes.sql`
+
+| Index | Bảng/cột | Mục đích |
+|---|---|---|
+| `IX_Room_Floor_Status` | Room `(FloorId, Status, IsActive)` | Lọc phòng theo tầng, trạng thái và hoạt động. |
+| `IX_Room_RoomType` | Room `(RoomTypeId)` | Lọc phòng theo loại. |
+| `IX_Reservation_Room_Time_Status` | Reservation `(RoomId, ExpectedCheckIn, ExpectedCheckOut, Status)` | Kiểm tra và tra cứu lịch đặt phòng theo phòng/thời gian. |
+| `IX_Reservation_Customer_CheckIn` | Reservation `(CustomerId, ExpectedCheckIn)` | Tra cứu đặt phòng theo khách và ngày đến. |
+| `UX_Stay_Reservation` | Stay `(ReservationId)` WHERE ReservationId IS NOT NULL | Một Reservation tạo tối đa một Stay. |
+| `IX_Stay_Room_Status` | Stay `(RoomId, Status)` | Tìm Stay theo phòng và trạng thái. |
+| `IX_Stay_Customer` | Stay `(CustomerId)` | Tra cứu lịch sử lưu trú theo khách. |
+| `IX_StayService_Stay_UsedAt` | StayService `(StayId, UsedAt)` | Lấy dịch vụ theo Stay và thời gian. |
+| `IX_Invoice_Status_CreatedAt` | Invoice `(Status, CreatedAt)` | Lọc hóa đơn theo trạng thái và ngày tạo. |
+| `IX_Payment_Invoice_PaidAt` | Payment `(InvoiceId, PaidAt)` | Tra cứu giao dịch theo hóa đơn và thời gian. |
+
+### 6.4. Các quy tắc cần kiểm tra trong Service
+
+Không phải mọi quy tắc đều được thể hiện bằng CHECK/UNIQUE của SQLite. Service phải chịu trách nhiệm cho:
+
+- Kiểm tra đặt phòng trùng khoảng thời gian trên cùng một Room.
+- Kiểm tra số phòng còn khả dụng khi Reservation chỉ gán RoomType mà chưa có RoomId.
+- Kiểm tra không có hai Stay `InProgress` trên cùng một Room.
+- Kiểm tra số khách không vượt sức chứa RoomType.
+- Chỉ cho thêm dịch vụ khi Stay `InProgress`.
+- Kiểm tra Room/RoomType/Floor/HotelService đang hoạt động trước khi sử dụng.
+- Tính tiền, tiền cọc, số tiền cần thu và tiền hoàn theo công thức đã thống nhất.
+- Cập nhật đồng bộ Reservation/Stay/Room/Invoice/Payment trong transaction khi nghiệp vụ liên quan nhiều bảng.
+
+Hai khoảng thời gian giao nhau khi:
 
 ```text
 ExistingStart < NewEnd AND ExistingEnd > NewStart
 ```
 
-Không dùng riêng `Room.Status` để kết luận một phòng không có lịch trùng trong tương lai. `Room.Status` phản ánh trạng thái vận hành hiện tại; kiểm tra đặt phòng cần xem cả lịch Reservation/Stay. Với đặt phòng chưa gán `RoomId`, phải trừ số booking loại phòng đó khỏi số lượng phòng còn khả dụng trong khoảng thời gian tương ứng. Khi hủy booking hoặc hoàn tất dọn phòng, tính lại trạng thái phòng dựa trên Stay và các Reservation còn hiệu lực đã được gán.
-
-### 5.2. Ràng buộc tính tiền
-
-- `HourlyRate >= 0`, `DailyRate >= 0`.
-- `Quantity > 0`, `UnitPrice >= 0`, `Amount = Quantity * UnitPrice`.
-- `RoomCharge >= 0`, `ServiceCharge >= 0`, `SubTotal = RoomCharge + ServiceCharge`.
-- `DepositDeducted <= SubTotal`.
-- `AmountDue = max(0, SubTotal - DepositAmount)`.
-- `RefundDue = max(0, DepositAmount - SubTotal)`.
-- `ChargeBasis` chỉ nhận `Hour` hoặc `Day`; `ChargedUnits` là số nguyên dương; `AppliedRate >= 0`.
+Không dùng riêng `Room.Status` để kết luận phòng không có lịch đặt trong tương lai; phải truy vấn Reservation và Stay.
 
 ---
 
-## 6. Quy tắc tạo và cập nhật Entity theo nghiệp vụ
+## 7. Quy trình sử dụng Entity theo nghiệp vụ
 
-### 6.1. Khi tạo đặt phòng
+### 7.1. Tạo Reservation
 
-- Tạo hoặc chọn `Customer`.
-- Tạo `Reservation` với `Status = Confirmed`.
-- Nếu Reservation chỉ chọn loại phòng, `RoomId = null` và không cập nhật Room sang `Reserved`.
-- Nếu Reservation gán phòng cụ thể, kiểm tra lịch; khi hợp lệ thì cập nhật Room sang `Reserved`.
+1. Tìm hoặc tạo `Customer`.
+2. Chọn `RoomType`.
+3. Có thể chọn `Room` cụ thể hoặc để `RoomId = null`.
+4. Kiểm tra khoảng thời gian hợp lệ và khả dụng.
+5. Lưu `Reservation` với `Status = Confirmed`.
+6. Nếu đã gán Room cụ thể, cập nhật Room sang `Reserved` khi không có xung đột.
 
-### 6.2. Khi check-in
+### 7.2. Check-in
 
-- Tạo `Stay` mới, `Status = InProgress`.
-- Lưu `ActualCheckIn`, `ExpectedCheckOut`, `GuestCount`.
-- Sao chép giá giờ/ngày từ `RoomType` sang `HourlyRateAtCheckIn` và `DailyRateAtCheckIn`.
-- Cập nhật Room sang `Occupied`.
-- Nếu từ Reservation, cập nhật Reservation sang `CheckedIn` và đặt `Stay.ReservationId` tương ứng.
-- Các thao tác được thực hiện trong một transaction.
+1. Chọn Reservation đến hạn hoặc tạo lượt khách vãng lai.
+2. Xác nhận Customer, giấy tờ, số khách và Room hợp lệ.
+3. Kiểm tra phòng không `Occupied`/`Cleaning`, sức chứa và lịch trùng.
+4. Tạo `Stay` với `Status = InProgress`.
+5. Sao chép giá giờ/ngày từ RoomType vào Stay.
+6. Cập nhật Room thành `Occupied`.
+7. Nếu check-in từ Reservation, cập nhật Reservation thành `CheckedIn`.
+8. Thực hiện tạo Stay và cập nhật các trạng thái liên quan trong cùng `SqliteTransaction`.
 
-### 6.3. Khi thêm dịch vụ
+### 7.3. Ghi dịch vụ
 
-- Kiểm tra Stay `InProgress`.
-- Tạo `StayService` với `UnitPrice` lấy từ giá hiện tại của `HotelService` tại thời điểm thêm.
-- Tính `Amount = Quantity * UnitPrice`.
+1. Nhận `StayId` đang `InProgress`.
+2. Chọn `HotelService` đang hoạt động.
+3. Nhập Quantity > 0.
+4. Sao chép UnitPrice hiện tại vào `StayService.UnitPrice`.
+5. Tính Amount = Quantity × UnitPrice.
+6. Lưu StayService; không cho ghi thêm nếu Stay đã `CheckoutPending` hoặc `Completed`.
 
-### 6.4. Khi checkout
+### 7.4. Checkout và lập Invoice
 
-- Tính tiền từ Stay và StayService; lưu cách tính (`ChargeBasis`), số đơn vị tính (`ChargedUnits`) và đơn giá áp dụng (`AppliedRate`) trong Invoice để có thể giải thích lại khoản tiền.
-- Tạo Invoice duy nhất cho Stay.
-- Khi bấm Thanh toán, ghi Payment mô phỏng (nếu `AmountDue > 0`), chuyển Invoice sang `Paid` và Stay sang `CheckoutPending`. Stay không được ghi thêm dịch vụ ở trạng thái này.
-- Khi bấm In mô phỏng, cập nhật `Invoice.PrintedAt`, chuyển Stay sang `Completed`, Reservation tương ứng sang `Completed` và Room sang `Cleaning`. Nếu ứng dụng đóng sau khi thanh toán nhưng trước khi in, người dùng có thể mở hóa đơn để tiếp tục in và hoàn tất.
+1. Chọn Stay `InProgress` và ghi ActualCheckOut.
+2. Chọn cách tính Hour/Day.
+3. Tính tiền phòng từ giá đã chụp trong Stay.
+4. Tính tổng dịch vụ từ các StayService.
+5. Lấy tiền cọc từ Reservation nếu Stay có Reservation; khách vãng lai không có Reservation thì tiền cọc bằng 0.
+6. Tạo một Invoice cho Stay; `Invoice.StayId` UNIQUE ngăn lập hóa đơn thứ hai.
+7. Khi xác nhận thanh toán mô phỏng, cập nhật Invoice `Paid`, ghi Payment nếu AmountDue > 0 và chuyển Stay sang `CheckoutPending`.
+8. Khi in mô phỏng, cập nhật PrintedAt, Stay `Completed`, Reservation `Completed` nếu có, Room `Cleaning`.
+9. Các cập nhật nhiều bảng phải được đặt trong transaction phù hợp.
 
-### 6.5. Khi hoàn tất dọn phòng
+### 7.5. Hoàn tất dọn phòng
 
-- Chỉ chấp nhận Room đang `Cleaning`.
-- Tính lại trạng thái: chuyển Room sang `Reserved` nếu vẫn còn Reservation đã gán phòng và còn hiệu lực; nếu không thì chuyển sang `Available`.
+1. Chọn Room `Cleaning`.
+2. Xác nhận đã dọn xong.
+3. Kiểm tra còn Reservation hợp lệ đã gán phòng hay không.
+4. Nếu còn, Room chuyển `Reserved`; nếu không, chuyển `Available`.
 
 ---
 
-## 7. Mẫu class C# tham khảo
+## 8. Quy tắc phối hợp cho các thành viên
 
-Mẫu sau chỉ minh họa cách khai báo Entity bằng class/properties/enum. Nhóm cần giữ tên và kiểu thuộc tính nhất quán với bảng ở trên.
+1. Không tự ý đổi tên Entity, property, enum hoặc kiểu dữ liệu.
+2. Không thêm/xóa cột hoặc đổi quan hệ chỉ trong một nhánh mà không cập nhật tài liệu này và SQL scripts.
+3. Khi cần thay đổi schema, cập nhật đồng bộ:
+    - `docs/HotelManagement_Entities.md`;
+    - các file `database/*.sql` hoặc script migration mới;
+    - Entity/Enum trong `HotelManagement.Core`;
+    - Repository ánh xạ dữ liệu;
+    - Service/validation có liên quan.
+4. Không thêm SQL vào Form hoặc Entity.
+5. Không tạo Navigation Property chỉ để dễ truy cập dữ liệu; dùng Repository/DTO khi cần kết quả JOIN.
+6. Không commit file `.sqlite`, `.sqlite-wal`, `.sqlite-shm` có dữ liệu runtime.
+7. Dùng `SqliteValueConverter` khi lưu/đọc tiền VND và Quantity; không tự tạo cách chuyển đổi khác trong từng Repository.
+8. Lưu enum đúng tên thành viên đang khai báo trong C# và được CHECK trong schema.
 
-```csharp
-namespace HotelManagement.Core.Enums;
+---
 
-public enum RoomStatus
-{
-    Available,
-    Reserved,
-    Occupied,
-    Cleaning
-}
+## 9. Danh sách file Entity và Enum hiện tại
 
-public enum StayStatus
-{
-    InProgress,
-    Completed
-}
-
-namespace HotelManagement.Core.Entities;
-
-public class Room
-{
-    public int RoomId { get; set; }
-    public string RoomCode { get; set; } = string.Empty;
-    public int FloorId { get; set; }
-    public int RoomTypeId { get; set; }
-    public RoomStatus Status { get; set; } = RoomStatus.Available;
-    public string? Note { get; set; }
-    public bool IsActive { get; set; } = true;
-}
-
-public class Stay
-{
-    public int StayId { get; set; }
-    public int? ReservationId { get; set; }
-    public int CustomerId { get; set; }
-    public int RoomId { get; set; }
-    public DateTime ActualCheckIn { get; set; }
-    public DateTime ExpectedCheckOut { get; set; }
-    public DateTime? ActualCheckOut { get; set; }
-    public int GuestCount { get; set; }
-    public decimal HourlyRateAtCheckIn { get; set; }
-    public decimal DailyRateAtCheckIn { get; set; }
-    public StayStatus Status { get; set; } = StayStatus.InProgress;
-    public string? Note { get; set; }
-}
+```text
+src/HotelManagement.Core/
+├── Entities/
+│   ├── Customer.cs
+│   ├── Floor.cs
+│   ├── HotelService.cs
+│   ├── Invoice.cs
+│   ├── Payment.cs
+│   ├── Reservation.cs
+│   ├── Room.cs
+│   ├── RoomType.cs
+│   ├── Stay.cs
+│   └── StayService.cs
+└── Enums/
+    ├── ChargeBasis.cs
+    ├── IdentityType.cs
+    ├── InvoiceStatus.cs
+    ├── PaymentMethod.cs
+    ├── PaymentStatus.cs
+    ├── ReservationStatus.cs
+    ├── RoomStatus.cs
+    ├── ServiceCategory.cs
+    └── StayStatus.cs
 ```
 
-> Không cần sao chép toàn bộ Navigation Property của Entity khác nếu đang dùng ADO.NET trực tiếp. Khi cần hiển thị thông tin liên kết, Repository có thể trả DTO hoặc truy vấn JOIN. Tránh nhúng một Entity đầy đủ vào Entity khác nếu chưa có nhu cầu.
-
----
-
-## 8. Những điểm nhóm cần chốt một lần trước khi code
-
-1. Tên database chính thức: mặc định `HotelManagementDb`.
-2. Tên namespace/project: mặc định `HotelManagement.*`.
-3. Kiểu instance SQL: đề xuất `(localdb)\MSSQLLocalDB`.
-4. Quy tắc giá: làm tròn lên theo giờ hoặc theo ngày như công thức trong Project Spec.
-5. Cách ghi tiền cọc: `Reservation.DepositAmount` là số tiền **đã nhận thực tế**, không phải số tiền dự kiến thu.
-6. Một Reservation có thể chưa có `RoomId`; nếu có `RoomId` thì phải kiểm tra lịch trùng và cập nhật Room `Reserved`.
-7. Hóa đơn: một Stay tối đa một Invoice; chi tiết dịch vụ đọc từ `StayService`.
-8. Thanh toán/in: mô phỏng offline, nhưng cập nhật Invoice/Payment/PrintedAt vào database. Stay chuyển `CheckoutPending` sau thanh toán và `Completed` sau in mô phỏng.
-9. Phòng chỉ chuyển về `Available` (hoặc `Reserved` nếu còn đặt phòng tương lai) sau thao tác hoàn tất dọn phòng.
-
+**Nguồn chuẩn khi có khác biệt:** class Entity/Enum hiện được nhóm thống nhất và schema SQLite đang được commit. Nếu một trong hai thay đổi, phải cập nhật nguồn còn lại cùng tài liệu trong một commit/PR; không để code và tài liệu lệch nhau.

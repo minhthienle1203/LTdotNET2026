@@ -1,11 +1,8 @@
-using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 
 namespace HotelManagement.Infrastructure.Data;
 
-/// <summary>
-/// Tạo SqlConnection cho các Repository. Connection string được truyền từ
-/// tầng khởi tạo ứng dụng; không đặt thông tin kết nối trực tiếp trong Repository.
-/// </summary>
+///Tạo kết nối ADO.NET đến file SQLite
 public sealed class DbConnectionFactory
 {
     private readonly string _connectionString;
@@ -13,12 +10,32 @@ public sealed class DbConnectionFactory
     public DbConnectionFactory(string connectionString)
     {
         if (string.IsNullOrWhiteSpace(connectionString))
+            throw new ArgumentException(
+                "Connection string không được để trống.",
+                nameof(connectionString));
+
+        var builder = new SqliteConnectionStringBuilder(connectionString);
+
+        builder.DataSource = Environment.ExpandEnvironmentVariables(
+            builder.DataSource);
+
+        if (builder.DataSource != ":memory:")
         {
-            throw new ArgumentException("Connection string không được để trống.", nameof(connectionString));
+            builder.DataSource = Path.GetFullPath(builder.DataSource);
+
+            string? directory = Path.GetDirectoryName(builder.DataSource);
+
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
         }
 
-        _connectionString = connectionString;
+        builder.Mode = SqliteOpenMode.ReadWriteCreate;
+        builder.ForeignKeys = true;
+        builder.Pooling = true;
+        builder.DefaultTimeout = 5;
+
+        _connectionString = builder.ToString();
     }
 
-    public SqlConnection CreateConnection() => new(_connectionString);
+    public SqliteConnection CreateConnection() => new(_connectionString);
 }
