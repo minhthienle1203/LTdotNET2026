@@ -3,7 +3,7 @@ using Microsoft.Data.Sqlite;
 
 namespace HotelManagement.Infrastructure.Data;
 
-/// int schema và dữ liệu demo khi run với SQLite lần đầu
+/// init schema và dữ liệu demo khi run với SQLite lần đầu
 public sealed class DbInitializer
 {
     private const string ResourcePrefix = "HotelManagement.Infrastructure.Database.";

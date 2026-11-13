@@ -2,7 +2,7 @@ using Microsoft.Data.Sqlite;
 
 namespace HotelManagement.Infrastructure.Data;
 
-///Tạo kết nối ADO.NET đến file SQLite
+///tạo kết nối ADO.NET đến file SQLite
 public sealed class DbConnectionFactory
 {
     private readonly string _connectionString;
