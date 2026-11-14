@@ -48,7 +48,7 @@ internal static class Program
                 "S13",
                 _ => new ServiceCatalogView(mainForm.NavigateToScreen)
             );
-            // Đăng kí trang S14
+            // Đăng kí trang S15
             mainForm.RegisterPage(
                 "S15",
                 _ => new ServiceUsageView(mainForm.NavigateToScreen)
