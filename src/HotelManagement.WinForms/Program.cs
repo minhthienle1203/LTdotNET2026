@@ -3,7 +3,7 @@ using HotelManagement.Infrastructure.Data;
 using HotelManagement.WinForms.Forms.Customers;
 using HotelManagement.WinForms.Forms.Dashboard;
 using HotelManagement.WinForms.Forms.Main;
-
+using HotelManagement.WinForms.Forms.Services;
 namespace HotelManagement.WinForms;
 
 internal static class Program
@@ -23,10 +23,10 @@ internal static class Program
                 File.ReadAllText(settingsPath));
 
             string connectionString = settings.RootElement
-                .GetProperty("ConnectionStrings")
-                .GetProperty("HotelManagementDb")
-                .GetString()
-                ?? throw new Exception("Connection String không hợp lệ.");
+                                          .GetProperty("ConnectionStrings")
+                                          .GetProperty("HotelManagementDb")
+                                          .GetString()
+                                      ?? throw new Exception("Connection String không hợp lệ.");
 
             // kết nối SQLite
             var connectionFactory =
@@ -36,9 +36,9 @@ internal static class Program
             new DbInitializer().Initialize(connectionFactory);
 
             // Chỉ tạo một MainForm.
-
             var mainForm = new MainForm();
-            // đăng kí các trang để load lên
+
+            // Đăng kí trang S01
             mainForm.RegisterPage(
                 "S01",
                 _ => new OverviewRoomMapView(mainForm.NavigateToScreen)
@@ -46,6 +46,12 @@ internal static class Program
             mainForm.RegisterPage(
                 "S07",
                 _ => new CustomersListView(mainForm.NavigateToScreen)
+            );
+
+            // Đăng kí trang S13 của m vào đây
+            mainForm.RegisterPage(
+                "S13",
+                _ => new ServiceCatalogView(mainForm.NavigateToScreen)
             );
 
             Application.Run(mainForm);
