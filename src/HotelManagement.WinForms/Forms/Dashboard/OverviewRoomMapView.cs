@@ -255,12 +255,12 @@ public sealed class OverviewRoomMapView : UserControl
                 if (room.StayId.HasValue)
                 {
                     AddAction("Xem lưu trú", "S12", room.StayId.Value);
-                    AddAction("Ghi dịch vụ", "S15", room.StayId.Value);
-                    AddAction("Trả phòng", "S16", room.StayId.Value);
+                    AddAction("Ghi dịch vụ", "S14", room.StayId.Value);
+                    AddAction("Trả phòng", "S15", room.StayId.Value);
                 }
                 break;
             case RoomDisplayStatus.Cleaning:
-                AddAction("Mở dọn phòng", "S19", room.RoomId);
+                AddAction("Mở dọn phòng", "S18", room.RoomId);
                 break;
         }
     }

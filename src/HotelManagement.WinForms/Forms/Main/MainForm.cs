@@ -25,13 +25,12 @@ public sealed class MainForm : Form
         ["S11"] = "Nhận phòng (Check-in)",
         ["S12"] = "Lưu trú đang diễn ra",
         ["S13"] = "Danh mục dịch vụ",
-        ["S14"] = "Thêm / cập nhật dịch vụ",
-        ["S15"] = "Ghi nhận dịch vụ phát sinh",
-        ["S16"] = "Trả phòng và thanh toán",
-        ["S17"] = "Danh sách hóa đơn",
-        ["S18"] = "Chi tiết hóa đơn và in mô phỏng",
-        ["S19"] = "Dọn phòng",
-        ["S20"] = "Báo cáo tháng"
+        ["S14"] = "Ghi nhận dịch vụ phát sinh",
+        ["S15"] = "Trả phòng và thanh toán",
+        ["S16"] = "Danh sách hóa đơn",
+        ["S17"] = "Chi tiết hóa đơn và in mô phỏng",
+        ["S18"] = "Dọn phòng",
+        ["S19"] = "Báo cáo tháng"
     };
 
     private static readonly Dictionary<string, string> MenuParents = new()
@@ -103,7 +102,7 @@ public sealed class MainForm : Form
     {
         code = Normalize(code);
         if (!ScreenTitles.TryGetValue(code, out var title)) throw new ArgumentException("Mã màn hình không hợp lệ.", nameof(code));
-        if ((code is "S15" or "S16" or "S18") && context is null)
+        if ((code is "S14" or "S15" or "S17") && context is null)
         {
             MessageBox.Show(this, $"Cần có dữ liệu liên quan để mở {code}.", "Thiếu thông tin", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
@@ -179,8 +178,8 @@ public sealed class MainForm : Form
         AddGroup(menu, "5. LỄ TÂN", ("S11", "S11 - Nhận phòng (Check-in)"), ("S12", "S12 - Lưu trú đang diễn ra"));
         AddGroup(menu, "6. DỊCH VỤ", ("S13", "S13 - Danh mục dịch vụ"));
         AddGroup(menu, "7. HÓA ĐƠN", ("S17", "S17 - Danh sách hóa đơn"));
-        AddGroup(menu, "8. DỌN PHÒNG", ("S19", "S19 - Dọn phòng"));
-        AddGroup(menu, "9. BÁO CÁO", ("S20", "S20 - Báo cáo tháng"));
+        AddGroup(menu, "8. DỌN PHÒNG", ("S18", "S18 - Dọn phòng"));
+        AddGroup(menu, "9. BÁO CÁO", ("S19", "S19 - Báo cáo tháng"));
         return menu;
     }
 
