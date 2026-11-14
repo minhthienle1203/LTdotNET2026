@@ -61,7 +61,7 @@ public sealed class CustomersListView : UserControl
         root.Controls.Add(BuildHeader(),0, 0);
         root.Controls.Add(BuildStatistics(), 0, 1);
         root.Controls.Add(BuildSearchBar(), 0, 2);
-        root.Controls.Add(BuildMainConten(), 0, 3);
+        root.Controls.Add(BuildMainContent(), 0, 3);
         Controls.Add((root));
     }
 
@@ -371,7 +371,7 @@ public sealed class CustomersListView : UserControl
         parent.Controls.Add(field,0,row);
     }
 
-    private void ConfigureGird()
+    private void configureGird()
     {
         _Gird.AllowUserToAddRows=false;
         _Gird.AllowUserToDeleteRows=false;
@@ -386,7 +386,7 @@ public sealed class CustomersListView : UserControl
         _Gird.GridColor = Color.FromArgb(225, 232, 241);
         _Gird.AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.AllCells;
         _Gird.ColumnHeadersHeight = 38;
-        _Gird.RowTemplate = 38;
+        _Gird.RowTemplate.Height = 38;
         _Gird.EnableHeadersVisualStyles = false;
         _Gird.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(232, 239, 240);
         _Gird.ColumnHeadersDefaultCellStyle.ForeColor = Color.FromArgb(35, 48, 65);
