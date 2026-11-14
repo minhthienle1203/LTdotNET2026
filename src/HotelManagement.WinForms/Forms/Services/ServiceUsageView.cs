@@ -6,7 +6,7 @@ using System.Windows.Forms;
 
 namespace HotelManagement.WinForms.Forms.Services;
 
-/// S14 - Ghi nhan dịch vụ.
+/// S15 - Ghi nhan dịch vụ.
 
 public sealed class ServiceUsageView : UserControl
 {

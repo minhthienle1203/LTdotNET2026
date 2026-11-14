@@ -50,7 +50,7 @@ internal static class Program
             );
             // Đăng kí trang S14
             mainForm.RegisterPage(
-                "S14",
+                "S15",
                 _ => new ServiceUsageView(mainForm.NavigateToScreen)
             );
 
