@@ -176,9 +176,9 @@ public sealed class CustomersListView : UserControl
             ForeColor = Color.Gray,
             TextAlign = ContentAlignment.MiddleLeft
         };
-        valueLabel.Controls.Add(noteLabel);
-        valueLabel.Controls.Add(valueLabel);
-        valueLabel.Controls.Add(titleLabel);
+        card.Controls.Add(noteLabel);
+        card.Controls.Add(valueLabel);
+        card.Controls.Add(titleLabel);
         return card;
 
     }
