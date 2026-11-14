@@ -240,17 +240,16 @@ HotelManagement/
 │   │   │   │   └── ActiveStaysView.cs           # S12 – Danh sách lưu trú đang diễn ra
 │   │   │   ├── Services/
 │   │   │   │   ├── ServiceCatalogView.cs        # S13 – Danh mục dịch vụ
-│   │   │   │   ├── ServiceFormView.cs            # S14 – Thêm/cập nhật dịch vụ
-│   │   │   │   └── ServiceUsageView.cs           # S15 – Ghi nhận dịch vụ phát sinh
+│   │   │   │   └── ServiceUsageView.cs          # S14 – Ghi nhận dịch vụ phát sinh
 │   │   │   ├── CheckOut/
-│   │   │   │   └── CheckOutView.cs              # S16 – Trả phòng và thanh toán
+│   │   │   │   └── CheckOutView.cs              # S15 – Trả phòng và thanh toán
 │   │   │   ├── Invoices/
-│   │   │   │   ├── InvoiceListView.cs           # S17 – Danh sách hóa đơn
-│   │   │   │   └── InvoiceDetailView.cs         # S18 – Chi tiết và in mô phỏng
+│   │   │   │   ├── InvoiceListView.cs           # S16 – Danh sách hóa đơn
+│   │   │   │   └── InvoiceDetailView.cs         # S17 – Chi tiết và in mô phỏng
 │   │   │   ├── Housekeeping/
-│   │   │   │   └── HousekeepingView.cs          # S19 – Dọn phòng
+│   │   │   │   └── HousekeepingView.cs          # S18 – Dọn phòng
 │   │   │   └── Reports/
-│   │   │       └── MonthlyReportView.cs         # S20 – Báo cáo tháng
+│   │   │       └── MonthlyReportView.cs         # S19 – Báo cáo tháng
 │   │   ├── Controls/                   # Control dùng chung
 │   │   ├── Common/                     # Dialog, format, binding dùng chung
 │   │   └── Resources/                  # Icon, hình giao diện
@@ -306,7 +305,7 @@ HotelManagement/
 
 ### 5.1. Form chính và nguyên tắc đếm màn hình
 
-`MainForm` là khung cửa sổ chính sau khi mở chương trình, chịu trách nhiệm điều hướng và hiển thị nội dung. `MainForm` **không tính** là một trong 20 màn hình nghiệp vụ.
+`MainForm` là khung cửa sổ chính sau khi mở chương trình, chịu trách nhiệm điều hướng và hiển thị nội dung. `MainForm` **không tính** là một trong 19 màn hình nghiệp vụ.
 
 Bố cục đề xuất:
 
@@ -317,14 +316,14 @@ Bố cục đề xuất:
 
 **Quy ước để đáp ứng yêu cầu 15–20 màn hình:**
 
-1. Đồ án triển khai **20 màn hình nghiệp vụ**, đánh mã từ `S01` đến `S20` như bảng bên dưới.
-2. Mỗi màn hình là một điểm đến điều hướng độc lập trong khu vực nội dung của `MainForm`. Có thể triển khai bằng `UserControl`; không bắt buộc phải tạo 20 cửa sổ `Form` độc lập.
+1. Đồ án triển khai **19 màn hình nghiệp vụ**, đánh mã từ `S01` đến `S19` như bảng bên dưới.
+2. Mỗi màn hình là một điểm đến điều hướng độc lập trong khu vực nội dung của `MainForm`. Có thể triển khai bằng `UserControl`; không bắt buộc phải tạo 19 cửa sổ `Form` độc lập.
 3. Các màn hình danh sách và màn hình thêm/cập nhật được tách riêng khi chúng có luồng nhập liệu, trường dữ liệu và thao tác lưu riêng.
 4. `MessageBox`, hộp thoại xác nhận, tab, panel chi tiết nhỏ và popup chọn dữ liệu **không được tính** thành màn hình riêng.
 5. Màn hình tạo/cập nhật được mở từ nút Thêm hoặc Sửa của màn hình danh sách; sau khi lưu/hủy thì quay lại màn hình danh sách.
 6. Không bổ sung màn hình đăng nhập vì phiên bản đồ án hiện tại không yêu cầu quản lý tài khoản hoặc phân quyền.
 
-### 5.2. Danh sách 20 màn hình nghiệp vụ
+### 5.2. Danh sách 19 màn hình nghiệp vụ
 
 | Mã | Màn hình | Thành phần giao diện chính | Thao tác / phạm vi |
 |---|---|---|---|
@@ -341,15 +340,14 @@ Bố cục đề xuất:
 | **S11** | Nhận phòng (Check-in) | Danh sách đặt phòng đến hạn; tìm khách; chọn phòng; số khách; thông tin giấy tờ | Check-in từ đặt phòng hoặc khách vãng lai; tạo `Stay`; chuyển phòng sang `OCCUPIED`. |
 | **S12** | Danh sách lưu trú đang diễn ra | Danh sách phòng đang có khách, khách đại diện, giờ check-in, số khách, tổng dịch vụ tạm tính | Tra cứu các `Stay` đang mở; chọn lượt lưu trú để mở S15 ghi dịch vụ hoặc S16 trả phòng. |
 | **S13** | Danh mục dịch vụ | `DataGridView`, tìm kiếm, lọc nhóm và trạng thái | Xem dịch vụ đồ uống/giặt ủi/thuê xe/khác; mở S14 để thêm/cập nhật/ngừng cung cấp. |
-| **S14** | Thêm/cập nhật dịch vụ | Form tên dịch vụ, nhóm, đơn vị tính, đơn giá, mô tả, trạng thái | Lưu thông tin dịch vụ; không xóa cứng dịch vụ đã phát sinh trong lịch sử. |
-| **S15** | Ghi nhận dịch vụ phát sinh | Thông tin lượt lưu trú/phòng; chọn dịch vụ; số lượng; đơn giá; bảng các khoản đã ghi | Thêm dịch vụ vào `Stay` đang `IN_PROGRESS`; lưu đơn giá tại thời điểm phát sinh và thành tiền. |
-| **S16** | Trả phòng và thanh toán | Thông tin `Stay`, thời gian ở, cách tính giờ/ngày, bảng dịch vụ, tiền phòng, tiền cọc, số tiền phải thu/hoàn | Tính tiền; cho phép kiểm tra trước khi xác nhận; bấm Thanh toán để mô phỏng thành công và lưu hóa đơn/payment. Sau đó mở S18 để in mô phỏng. |
-| **S17** | Danh sách hóa đơn | `DataGridView`, lọc ngày lập/trạng thái/mã hóa đơn/mã phòng/khách | Tra cứu hóa đơn đã tạo; mở S18 xem chi tiết và tiếp tục in nếu chưa in. |
-| **S18** | Chi tiết hóa đơn và in mô phỏng | Thông tin khách/phòng/thời gian; chi tiết tiền phòng/dịch vụ/cọc; trạng thái thanh toán và in | Xem nội dung hóa đơn; bấm In hóa đơn để hiển thị thông báo hoàn thành và lưu `PrintedAt`; hoàn tất luồng checkout theo quy tắc nghiệp vụ. |
-| **S19** | Dọn phòng | Danh sách phòng `CLEANING`, thông tin phòng và nút xác nhận dọn xong | Xác nhận phòng đã dọn; chuyển về `AVAILABLE` hoặc `RESERVED` nếu còn đặt phòng được gán có hiệu lực. |
-| **S20** | Báo cáo tháng | Bộ chọn tháng/năm; thẻ tổng hợp; bảng số liệu; biểu đồ bổ sung | Xem công suất phòng, doanh thu phòng và doanh thu dịch vụ theo tháng. |
+| **S14** | Ghi nhận dịch vụ phát sinh | Thông tin lượt lưu trú/phòng; chọn dịch vụ; số lượng; đơn giá; bảng các khoản đã ghi | Thêm dịch vụ vào `Stay` đang `IN_PROGRESS`; lưu đơn giá tại thời điểm phát sinh và thành tiền. |
+| **S15** | Trả phòng và thanh toán | Thông tin `Stay`, thời gian ở, cách tính giờ/ngày, bảng dịch vụ, tiền phòng, tiền cọc, số tiền phải thu/hoàn | Tính tiền; cho phép kiểm tra trước khi xác nhận; bấm Thanh toán để mô phỏng thành công và lưu hóa đơn/payment. Sau đó mở S18 để in mô phỏng. |
+| **S16** | Danh sách hóa đơn | `DataGridView`, lọc ngày lập/trạng thái/mã hóa đơn/mã phòng/khách | Tra cứu hóa đơn đã tạo; mở S18 xem chi tiết và tiếp tục in nếu chưa in. |
+| **S17** | Chi tiết hóa đơn và in mô phỏng | Thông tin khách/phòng/thời gian; chi tiết tiền phòng/dịch vụ/cọc; trạng thái thanh toán và in | Xem nội dung hóa đơn; bấm In hóa đơn để hiển thị thông báo hoàn thành và lưu `PrintedAt`; hoàn tất luồng checkout theo quy tắc nghiệp vụ. |
+| **S18** | Dọn phòng | Danh sách phòng `CLEANING`, thông tin phòng và nút xác nhận dọn xong | Xác nhận phòng đã dọn; chuyển về `AVAILABLE` hoặc `RESERVED` nếu còn đặt phòng được gán có hiệu lực. |
+| **S19** | Báo cáo tháng | Bộ chọn tháng/năm; thẻ tổng hợp; bảng số liệu; biểu đồ bổ sung | Xem công suất phòng, doanh thu phòng và doanh thu dịch vụ theo tháng. |
 
-**Tổng số: 20 màn hình nghiệp vụ (`S01`–`S20`).** Danh sách trên là căn cứ thống nhất để lập task, tạo thư mục giao diện, chia người thực hiện và nghiệm thu. Không cộng thêm các popup hoặc hộp thoại xác nhận vào con số này.
+**Tổng số: 19 màn hình nghiệp vụ (`S01`–`S19`).** Danh sách trên là căn cứ thống nhất để lập task, tạo thư mục giao diện, chia người thực hiện và nghiệm thu. Không cộng thêm các popup hoặc hộp thoại xác nhận vào con số này.
 
 ### 5.3. Luồng điều hướng giữa các màn hình
 
@@ -365,10 +363,10 @@ S01 Tổng quan & sơ đồ phòng
  ├── S12 Lưu trú đang diễn ra
  │    ├──> S15 Ghi nhận dịch vụ phát sinh
  │    └──> S16 Trả phòng & thanh toán ──> S18 Chi tiết hóa đơn/in mô phỏng
- ├── S13 Danh mục dịch vụ ───────> S14 Thêm/cập nhật dịch vụ
- ├── S17 Danh sách hóa đơn ──────> S18 Chi tiết hóa đơn/in mô phỏng
- ├── S19 Dọn phòng
- └── S20 Báo cáo tháng
+ ├── S13 Danh mục dịch vụ 
+ ├── S16 Danh sách hóa đơn ──────> S17 Chi tiết hóa đơn/in mô phỏng
+ ├── S18 Dọn phòng
+ └── S19 Báo cáo tháng
 ```
 
 Sơ đồ thể hiện các điểm điều hướng chính, không phải sơ đồ trình tự xử lý chi tiết. Việc mở S15/S16 phải mang theo `StayId`; việc mở S18 phải mang theo `InvoiceId`, tránh truy vấn lại bằng mã phòng hoặc thông tin hiển thị không duy nhất.
@@ -503,11 +501,6 @@ Giặt ủi.
 Thuê xe.
 
 Khác.
-
-
-Nhân viên được thêm, sửa, ngừng cung cấp dịch vụ. Không xóa cứng dịch vụ đã xuất hiện trong lịch sử sử dụng.
-
-
 
 
 ### 6.7. F07 – Ghi nhận dịch vụ phát sinh
@@ -824,19 +817,19 @@ Các mẫu Regex chỉ là kiểm tra định dạng đầu vào, không thay th
 
 ### 10.2. Phân công đề xuất
 
-Phân công theo đúng 20 màn hình đã đánh mã ở mục 5.2. Mỗi thành viên chịu trách nhiệm trọn module: giao diện, Service, Repository và validation trong phạm vi được giao.
+Phân công theo đúng 19 màn hình đã đánh mã ở mục 5.2. Mỗi thành viên chịu trách nhiệm trọn module: giao diện, Service, Repository và validation trong phạm vi được giao.
 
 | Thành viên | Màn hình phụ trách | Module / nghiệp vụ | Phần code chính | Khối lượng ước lượng |
 |---|---|---|---|---:|
-| **Thành viên 1** - [Tên người phụ trách]| **S01–S06, S19** (7 màn hình) | Tổng quan/sơ đồ phòng; quản lý tầng; danh sách và biểu mẫu loại phòng; danh sách và biểu mẫu phòng; dọn phòng. | `Forms/Dashboard`, `Forms/Floors`, `Forms/RoomTypes`, `Forms/Rooms`, `Forms/Housekeeping`; `RoomService`, `FloorService`, `RoomTypeService`; `RoomRepository`, `FloorRepository`, `RoomTypeRepository`. Đồng thời khởi tạo solution, cấu hình kết nối và nền tảng database, điều phối tích hợp. | **34%** (F01, F02, F10)|
+| **Thành viên 1** - [Tên người phụ trách]| **S01–S06, S18** (7 màn hình) | Tổng quan/sơ đồ phòng; quản lý tầng; danh sách và biểu mẫu loại phòng; danh sách và biểu mẫu phòng; dọn phòng. | `Forms/Dashboard`, `Forms/Floors`, `Forms/RoomTypes`, `Forms/Rooms`, `Forms/Housekeeping`; `RoomService`, `FloorService`, `RoomTypeService`; `RoomRepository`, `FloorRepository`, `RoomTypeRepository`. Đồng thời khởi tạo solution, cấu hình kết nối và nền tảng database, điều phối tích hợp. | **34%** (F01, F02, F10)|
 | **Thành viên 2** - [Bùi Hữu Trí]| **S07–S12** (6 màn hình) | Danh sách/biểu mẫu khách hàng; danh sách/biểu mẫu đặt phòng; check-in; danh sách lưu trú đang diễn ra. | `Forms/Customers`, `Forms/Reservations`, `Forms/CheckIn`; `CustomerService`, `ReservationService`, `CheckInService`; `CustomerRepository`, `ReservationRepository`, `StayRepository` (phần tạo và truy vấn lượt lưu trú). | **33%** (F03, F04, F05)|
-| **Thành viên 3** - [Tên người phụ trách]| **S13–S18, S20** (7 màn hình) | Danh mục và biểu mẫu dịch vụ; ghi nhận dịch vụ; check-out/thanh toán; danh sách/chi tiết hóa đơn; báo cáo tháng. | `Forms/Services`, `Forms/CheckOut`, `Forms/Invoices`, `Forms/Reports`; `ServiceCatalogService`, `ServiceUsageService`, `CheckOutService`, `InvoiceService`, `ReportService`; `ServiceRepository`, `StayServiceRepository`, `InvoiceRepository`, `PaymentRepository`, `ReportRepository`. | **33%** (F06, F07, F08, F09, F11)|
+| **Thành viên 3** - [Tên người phụ trách]| **S13–S17, S19** (7 màn hình) | Danh mục và biểu mẫu dịch vụ; ghi nhận dịch vụ; check-out/thanh toán; danh sách/chi tiết hóa đơn; báo cáo tháng. | `Forms/Services`, `Forms/CheckOut`, `Forms/Invoices`, `Forms/Reports`; `ServiceCatalogService`, `ServiceUsageService`, `CheckOutService`, `InvoiceService`, `ReportService`; `ServiceRepository`, `StayServiceRepository`, `InvoiceRepository`, `PaymentRepository`, `ReportRepository`. | **33%** (F06, F07, F08, F09, F11)|
 
 **Lý do phân chia:**
 
 - Thành viên 1 phụ trách dữ liệu nền về cấu trúc khách sạn và trạng thái phòng. S01, S02–S06 và S19 dùng chung dữ liệu `Floor`, `RoomType`, `Room`, nên có mức liên kết cao; việc giao cùng một người giảm xung đột khi cập nhật trạng thái phòng.
 - Thành viên 2 phụ trách trọn luồng trước và tại thời điểm khách nhận phòng: hồ sơ khách → đặt phòng → check-in → danh sách lượt lưu trú đang mở. Đây là nhóm có logic kiểm tra trùng lịch và sức chứa tương đối phức tạp.
-- Thành viên 3 phụ trách luồng phát sinh doanh thu: danh mục dịch vụ → ghi dịch vụ → checkout → hóa đơn/thanh toán; S20 đọc dữ liệu hóa đơn và lượt lưu trú để tổng hợp báo cáo.
+- Thành viên 3 phụ trách luồng phát sinh doanh thu: danh mục dịch vụ → ghi dịch vụ → checkout → hóa đơn/thanh toán; S19 đọc dữ liệu hóa đơn và lượt lưu trú để tổng hợp báo cáo.
 - Số màn hình được chia theo tỷ lệ **7–6–7**. Khối lượng ước lượng không chỉ dựa trên số màn hình mà còn xét độ phức tạp của nghiệp vụ, số bảng dữ liệu và trách nhiệm tích hợp.
 
 ### 10.3. Ranh giới trách nhiệm và phụ thuộc
@@ -846,11 +839,11 @@ Phân công theo đúng 20 màn hình đã đánh mã ở mục 5.2. Mỗi thàn
 | Solution, project references, cấu hình chung và `MainForm` | Thành viên 1 | Cả nhóm review trước khi thêm package hoặc đổi cấu trúc |
 | SQL schema và script khởi tạo ban đầu | Thành viên 1 điều phối | Thành viên 2 và 3 rà soát các bảng/khóa ngoại liên quan module của mình |
 | Entity và enum chung | Cả nhóm thống nhất; thành viên 1 tích hợp | Thành viên 2/3 không tự đổi tên/kiểu trường đã chốt |
-| S01–S06 và S19: giao diện, Service, Repository | Thành viên 1 | Thành viên 2/3 cung cấp yêu cầu trạng thái phòng và dữ liệu liên quan |
+| S01–S06 và S18: giao diện, Service, Repository | Thành viên 1 | Thành viên 2/3 cung cấp yêu cầu trạng thái phòng và dữ liệu liên quan |
 | S07–S12: khách hàng, đặt phòng, check-in, Stay | Thành viên 2 | Thành viên 1 phối hợp quy tắc phòng; thành viên 3 thống nhất cấu trúc `Stay` và tiền cọc |
-| S13–S18: dịch vụ, checkout, hóa đơn | Thành viên 3 | Thành viên 2 cung cấp hợp đồng `Stay`; thành viên 1 phối hợp cập nhật trạng thái phòng khi checkout hoàn tất |
-| S20: báo cáo tháng | Thành viên 3 | Thành viên 1 cung cấp dữ liệu phòng/tổng số phòng; thành viên 2 kiểm tra dữ liệu Stay; thành viên 3 chịu trách nhiệm truy vấn tổng hợp |
-| Điều hướng và component dùng chung | Thành viên 1 tích hợp | Mỗi thành viên đăng ký màn hình, tên điều khiển và luồng mở màn hình theo mã S01–S20 |
+| S13–S17: dịch vụ, checkout, hóa đơn | Thành viên 3 | Thành viên 2 cung cấp hợp đồng `Stay`; thành viên 1 phối hợp cập nhật trạng thái phòng khi checkout hoàn tất |
+| S19: báo cáo tháng | Thành viên 3 | Thành viên 1 cung cấp dữ liệu phòng/tổng số phòng; thành viên 2 kiểm tra dữ liệu Stay; thành viên 3 chịu trách nhiệm truy vấn tổng hợp |
+| Điều hướng và component dùng chung | Thành viên 1 tích hợp | Mỗi thành viên đăng ký màn hình, tên điều khiển và luồng mở màn hình theo mã S01–S19 |
 | Kiểm thử tích hợp toàn hệ thống | Cả nhóm | Mỗi người kiểm thử màn hình và nghiệp vụ trong phạm vi được giao |
 | Publish và Inno Setup | Thành viên 1 tích hợp | Thành viên 2/3 kiểm tra luồng nghiệp vụ trên bản cài đặt máy sạch |
 
@@ -864,15 +857,15 @@ Mỗi màn hình chỉ có **một người chịu trách nhiệm chính**. Ngư
 |---|---|---|
 | `FloorService` | `GetFloors()`, `CreateFloor()`, `UpdateFloor()`, `DeactivateFloor()` | S02: quản lý tầng. |
 | `RoomTypeService` | `GetRoomTypes()`, `CreateRoomType()`, `UpdateRoomType()` | S03–S04: danh sách và biểu mẫu loại phòng. |
-| `RoomService` | `GetRoomsByFloor()`, `GetRoomStatus()`, `CreateRoom()`, `UpdateRoom()`, `CompleteCleaning()` | S01, S05–S06, S19: sơ đồ, danh sách/biểu mẫu phòng và xác nhận phòng sẵn sàng. |
+| `RoomService` | `GetRoomsByFloor()`, `GetRoomStatus()`, `CreateRoom()`, `UpdateRoom()`, `CompleteCleaning()` | S01, S05–S06, S18: sơ đồ, danh sách/biểu mẫu phòng và xác nhận phòng sẵn sàng. |
 | `CustomerService` | `SearchCustomers()`, `CreateCustomer()`, `UpdateCustomer()` | S07–S08: hồ sơ khách đã lưu. |
 | `ReservationService` | `CheckAvailability()`, `CreateReservation()`, `CancelReservation()` | S09–S10: kết quả còn phòng, thông tin đặt phòng. |
 | `CheckInService` | `CheckInReservation()`, `CheckInWalkIn()` | S11–S12: `Stay` mới và danh sách lượt lưu trú đang mở. |
-| `ServiceCatalogService` | `GetServices()`, `CreateService()`, `UpdateService()`, `DeactivateService()` | S13–S14: danh mục và biểu mẫu dịch vụ. |
-| `ServiceUsageService` | `AddServiceUsage()`, `GetStayServices()` | S15: dòng dịch vụ phát sinh và tổng dịch vụ. |
-| `CheckOutService` | `CalculateCheckout()`, `CompleteCheckout()` | S16: bảng tính tiền và kết quả checkout. |
-| `InvoiceService` | `GetInvoice()`, `ConfirmPayment()`, `MarkPrinted()` | S17–S18: hóa đơn, giao dịch mô phỏng, trạng thái in. |
-| `ReportService` | `GetMonthlyReport()` | S20: công suất, doanh thu phòng và doanh thu dịch vụ. |
+| `ServiceCatalogService` | `GetServices()`, `CreateService()`, `UpdateService()`, `DeactivateService()` | S13: danh mục và biểu mẫu dịch vụ. |
+| `ServiceUsageService` | `AddServiceUsage()`, `GetStayServices()` | S14: dòng dịch vụ phát sinh và tổng dịch vụ. |
+| `CheckOutService` | `CalculateCheckout()`, `CompleteCheckout()` | S15: bảng tính tiền và kết quả checkout. |
+| `InvoiceService` | `GetInvoice()`, `ConfirmPayment()`, `MarkPrinted()` | S16–S17: hóa đơn, giao dịch mô phỏng, trạng thái in. |
+| `ReportService` | `GetMonthlyReport()` | S19: công suất, doanh thu phòng và doanh thu dịch vụ. |
 
 ### 10.5. Những phần không được tự ý sửa khi chưa báo nhóm
 
@@ -928,10 +921,10 @@ Danh sách dưới đây dựa theo phân công tại mục 10.2 và mã chức 
 | Thành viên 2 | F04 – S09–S10: Đặt phòng trước | `feature/F04-reservation-management` |
 | Thành viên 2 | F05 – S11–S12: Check-in và danh sách lưu trú | `feature/F05-checkin-stays` |
 | Thành viên 3 | F06 – S13–S14: Danh mục dịch vụ | `feature/F06-service-catalog` |
-| Thành viên 3 | F07 – S15: Dịch vụ phát sinh | `feature/F07-stay-service` |
-| Thành viên 3 | F08 – S16: Check-out và tính tiền | `feature/F08-checkout` |
-| Thành viên 3 | F09 – S17–S18: Danh sách, chi tiết và in hóa đơn | `feature/F09-invoice` |
-| Thành viên 3 | F11 – S20: Báo cáo tháng | `feature/F11-monthly-report` |
+| Thành viên 3 | F07 – S14: Dịch vụ phát sinh | `feature/F07-stay-service` |
+| Thành viên 3 | F08 – S15: Check-out và tính tiền | `feature/F08-checkout` |
+| Thành viên 3 | F09 – S16–S17: Danh sách, chi tiết và in hóa đơn | `feature/F09-invoice` |
+| Thành viên 3 | F11 – S19: Báo cáo tháng | `feature/F11-monthly-report` |
 
 Các nhánh nền tảng có thể được tạo trước khi triển khai nghiệp vụ:
 
@@ -1015,12 +1008,12 @@ Mẫu: `<type>: <mô tả ngắn>`.
 | TC20 | Báo cáo tháng | Chọn tháng có dữ liệu | Hiển thị công suất, doanh thu phòng và dịch vụ đúng theo dữ liệu mẫu. |
 | TC21 | Không mở được Database file | File bị khóa, thư mục không có quyền ghi hoặc cấu hình đường dẫn sai | Hiển thị lỗi dễ hiểu; không làm ứng dụng crash đột ngột. |
 | TC22 | Khởi động lần đầu | Máy chưa có file `HotelManagementDb.sqlite` | Chương trình tự tạo thư mục/file, tạo schema, index và seed data. |
-| TC23 | Kiểm tra đủ 20 màn hình | Mở lần lượt các mục điều hướng S01–S20 | Cả 20 màn hình đều mở được, hiển thị đúng tiêu đề/nội dung; không tính MainForm và popup. |
+| TC23 | Kiểm tra đủ 19 màn hình | Mở lần lượt các mục điều hướng S01–S20 | Cả 19 màn hình đều mở được, hiển thị đúng tiêu đề/nội dung; không tính MainForm và popup. |
 | TC24 | Điều hướng danh sách – biểu mẫu | Từ S03/S05/S07/S09/S13 mở màn hình thêm-sửa tương ứng, sau đó Lưu hoặc Hủy | Điều hướng đúng màn hình; dữ liệu được lưu hoặc hủy đúng; quay lại danh sách và tải lại dữ liệu. |
 
 ### 12.2. Tiêu chí nghiệm thu tổng thể
 
-- Có đủ **20 màn hình nghiệp vụ S01–S20** theo danh sách tại mục 5.2; các màn hình có thể điều hướng và luồng mở/quay lại hoạt động đúng. `MainForm` và các hộp thoại nhỏ không tính vào số lượng này.
+- Có đủ **19 màn hình nghiệp vụ S01–S20** theo danh sách tại mục 5.2; các màn hình có thể điều hướng và luồng mở/quay lại hoạt động đúng. `MainForm` và các hộp thoại nhỏ không tính vào số lượng này.
 - Ứng dụng khởi động được trên Windows bằng file cài đặt.
 - Không cần Internet để mở ứng dụng và thực hiện nghiệp vụ.
 - File SQLite được tạo và mở thành công tại thư mục dữ liệu người dùng; dữ liệu còn sau khi tắt/mở lại ứng dụng.
@@ -1093,7 +1086,7 @@ Trước khi nộp, thử trên máy ảo hoặc máy Windows khác:
 | Giai đoạn | Công việc | Kết quả cần có |
 |---|---|---|
 | 1. Chốt nền | Thống nhất Entity, enum, quy tắc trạng thái, công thức tính tiền, connection string, cấu trúc solution | Tài liệu Entity và project spec được nhóm xác nhận; solution build được. |
-| 2. CSDL và khung giao diện | Tạo database scripts, Repository nền, MainForm, điều hướng, component chung và khung 20 màn hình S01–S20 | Mở được WinForms, khởi tạo và kết nối file SQLite cục bộ, điều hướng được đến các màn hình đã tạo. |
+| 2. CSDL và khung giao diện | Tạo database scripts, Repository nền, MainForm, điều hướng, component chung và khung 19 màn hình S01–S19 | Mở được WinForms, khởi tạo và kết nối file SQLite cục bộ, điều hướng được đến các màn hình đã tạo. |
 | 3. Danh mục và đặt phòng | Quản lý phòng/loại/tầng/dịch vụ; khách hàng; đặt phòng | CRUD và kiểm tra khả dụng hoạt động. |
 | 4. Check-in và dịch vụ | Nhận phòng, chuyển trạng thái, ghi nhận dịch vụ | Tạo Stay và thêm dịch vụ chính xác. |
 | 5. Check-out và báo cáo | Tính tiền, cọc, hóa đơn, thanh toán/in mô phỏng, báo cáo tháng | Hoàn tất vòng đời một lượt lưu trú và số liệu báo cáo. |
@@ -1103,7 +1096,7 @@ Trước khi nộp, thử trên máy ảo hoặc máy Windows khác:
 
 ## 15. Các quyết định cần ghi nhớ
 
-1. Đây là **ứng dụng WinForms offline**, có đủ 20 màn hình nghiệp vụ S01–S20 theo mục 5.2.
+1. Đây là **ứng dụng WinForms offline**, có đủ 19 màn hình nghiệp vụ S01–S19 theo mục 5.2.
 2. Dữ liệu chính được lưu trong file SQLite cục bộ; không dùng dữ liệu giả trong bộ nhớ làm nơi lưu chính khi đã hoàn tất tích hợp Service/Repository.
 3. Dùng ADO.NET `Microsoft.Data.Sqlite` kết hợp POCO Entity; không dùng Entity Framework Core trong phiên bản hiện tại.
 4. Mọi Form gọi Service; Service gọi Repository; Repository thao tác SQLite. Tất cả SQL có tham số.
