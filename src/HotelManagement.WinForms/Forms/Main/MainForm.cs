@@ -32,6 +32,7 @@ public sealed class MainForm : Form
         ["S18"] = "Chi tiết hóa đơn và in mô phỏng",
         ["S19"] = "Dọn phòng",
         ["S20"] = "Báo cáo tháng"
+
     };
 
     private static readonly Dictionary<string, string> MenuParents = new()
