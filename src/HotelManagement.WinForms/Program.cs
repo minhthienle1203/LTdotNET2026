@@ -43,7 +43,7 @@ internal static class Program
                 _ => new OverviewRoomMapView(mainForm.NavigateToScreen)
             );
 
-            // Đăng kí trang S13 của m vào đây
+            // Đăng kí trang S13
             mainForm.RegisterPage(
                 "S13",
                 _ => new ServiceCatalogView(mainForm.NavigateToScreen)
