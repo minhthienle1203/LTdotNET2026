@@ -1,9 +1,11 @@
 using System.Text.Json;
 using HotelManagement.Core.Services;
 using HotelManagement.Infrastructure.Data;
+using HotelManagement.WinForms.Forms.Customers;
 using HotelManagement.Infrastructure.Data.Repositories;
 using HotelManagement.WinForms.Forms.Dashboard;
 using HotelManagement.WinForms.Forms.Main;
+using HotelManagement.WinForms.Forms.Services;
 
 namespace HotelManagement.WinForms;
 
@@ -51,6 +53,21 @@ internal static class Program
                     floorService,
                     mainForm.NavigateToScreen,
                     context)
+            );
+            mainForm.RegisterPage(
+                "S07",
+                _ => new CustomersListView(mainForm.NavigateToScreen)
+            );
+
+            // Đăng kí trang S13
+            mainForm.RegisterPage(
+                "S13",
+                _ => new ServiceCatalogView(mainForm.NavigateToScreen)
+            );
+            // Đăng kí trang S14
+            mainForm.RegisterPage(
+                "S14",
+                _ => new ServiceUsageView(mainForm.NavigateToScreen)
             );
 
             Application.Run(mainForm);
