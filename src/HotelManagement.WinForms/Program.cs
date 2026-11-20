@@ -1,9 +1,12 @@
 using System.Text.Json;
+using HotelManagement.Core.Services;
 using HotelManagement.Infrastructure.Data;
 using HotelManagement.WinForms.Forms.Customers;
+using HotelManagement.Infrastructure.Data.Repositories;
 using HotelManagement.WinForms.Forms.Dashboard;
 using HotelManagement.WinForms.Forms.Main;
 using HotelManagement.WinForms.Forms.Services;
+
 namespace HotelManagement.WinForms;
 
 internal static class Program
@@ -23,25 +26,33 @@ internal static class Program
                 File.ReadAllText(settingsPath));
 
             string connectionString = settings.RootElement
-                                          .GetProperty("ConnectionStrings")
-                                          .GetProperty("HotelManagementDb")
-                                          .GetString()
-                                      ?? throw new Exception("Connection String không hợp lệ.");
+                .GetProperty("ConnectionStrings")
+                .GetProperty("HotelManagementDb")
+                .GetString()
+                ?? throw new Exception("Connection String không hợp lệ.");
 
             // kết nối SQLite
-            var connectionFactory =
-                new DbConnectionFactory(connectionString);
+            var connectionFactory = new DbConnectionFactory(connectionString);
 
             // khởi tạo Database
             new DbInitializer().Initialize(connectionFactory);
 
-            // Chỉ tạo một MainForm.
-            var mainForm = new MainForm();
+            //dang ki cac repo, service
+            var floorRepository = new FloorRepository(connectionFactory);
+            var roomRepository = new RoomRepository(connectionFactory);
+            var floorService = new FloorService(floorRepository);
+            var roomService = new RoomService(roomRepository);
+            // tạo một MainForm cố định
 
-            // Đăng kí trang S01
+            var mainForm = new MainForm();
+            // đăng kí các trang để load lên
             mainForm.RegisterPage(
                 "S01",
-                _ => new OverviewRoomMapView(mainForm.NavigateToScreen)
+                context => new OverviewRoomMapView(
+                    roomService,
+                    floorService,
+                    mainForm.NavigateToScreen,
+                    context)
             );
             mainForm.RegisterPage(
                 "S07",
@@ -58,7 +69,6 @@ internal static class Program
                 "S14",
                 _ => new ServiceUsageView(mainForm.NavigateToScreen)
             );
-
 
             Application.Run(mainForm);
         }

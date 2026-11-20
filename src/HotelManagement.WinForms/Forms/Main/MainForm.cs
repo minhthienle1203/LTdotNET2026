@@ -57,7 +57,7 @@ public sealed class MainForm : Form
         StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = new Size(760, 520);
         WindowState = FormWindowState.Maximized;
-        Font = new Font("Segoe UI", 8.5F);
+        Font = new Font("Segoe UI", 10F);
         BackColor = PageBackground;
 
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1, Margin = Padding.Empty };
@@ -74,7 +74,7 @@ public sealed class MainForm : Form
         var content = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1, Padding = new Padding(12, 6, 12, 6), Margin = Padding.Empty };
         content.RowStyles.Add(new RowStyle(SizeType.Absolute, 29));
         content.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        _pageTitle = new Label { Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = Color.FromArgb(37, 48, 63), Margin = Padding.Empty };
+        _pageTitle = new Label { Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI", 12, FontStyle.Bold), ForeColor = Color.FromArgb(37, 48, 63), Margin = Padding.Empty };
         _pageHost = new Panel { Dock = DockStyle.Fill, AutoScroll = true, BackColor = Color.White, Margin = Padding.Empty };
         _pageHost.Resize += (_, _) => ResizePage();
         content.Controls.Add(_pageTitle, 0, 0);
@@ -157,7 +157,7 @@ public sealed class MainForm : Form
             Text = "HOTEL MANAGEMENT  |  HỆ THỐNG QUẢN LÝ KHÁCH SẠN",
             ForeColor = Color.White,
             TextAlign = ContentAlignment.MiddleLeft,
-            Font = new Font("Segoe UI", 8, FontStyle.Bold),
+            Font = new Font("Segoe UI", 10, FontStyle.Bold),
             Margin = Padding.Empty
         });
         return header;
@@ -170,7 +170,7 @@ public sealed class MainForm : Form
             Dock = DockStyle.Fill, AutoScroll = true, FlowDirection = FlowDirection.TopDown,
             WrapContents = false, BackColor = SidebarColor, Padding = new Padding(7, 5, 7, 5), Margin = Padding.Empty
         };
-        menu.Controls.Add(new Label { Text = "PHÂN HỆ NGHIỆP VỤ", Width = 210, Height = 15, ForeColor = Color.Silver, Font = new Font("Segoe UI", 7, FontStyle.Bold), Margin = new Padding(1, 0, 1, 3) });
+        menu.Controls.Add(new Label { Text = "PHÂN HỆ NGHIỆP VỤ", Width = 210, Height = 15, ForeColor = Color.Silver, Font = new Font("Segoe UI", 9, FontStyle.Bold), Margin = new Padding(1, 0, 1, 3) });
         AddGroup(menu, "1. TỔNG QUAN", ("S01", "S01 - Tổng quan và sơ đồ phòng"));
         AddGroup(menu, "2. QUẢN LÝ PHÒNG", ("S02", "S02 - Quản lý tầng"), ("S03", "S03 - Danh sách loại phòng"), ("S05", "S05 - Danh sách phòng"));
         AddGroup(menu, "3. KHÁCH HÀNG", ("S07", "S07 - Danh sách khách hàng"));
@@ -192,7 +192,7 @@ public sealed class MainForm : Form
             {
                 Text = item.Text, Width = 210, Height = 22, Tag = item.Code,
                 FlatStyle = FlatStyle.Flat, BackColor = SidebarColor, ForeColor = Color.White,
-                TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI", 7.5F),
+                TextAlign = ContentAlignment.MiddleLeft, Font = new Font("Segoe UI", 9F),
                 Padding = new Padding(6, 0, 3, 0), Margin = new Padding(0, 0, 0, 1),
                 Cursor = Cursors.Hand, UseVisualStyleBackColor = false, AutoEllipsis = true
             };
