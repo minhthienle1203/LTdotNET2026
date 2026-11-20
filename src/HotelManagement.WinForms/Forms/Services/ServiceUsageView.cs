@@ -21,6 +21,8 @@ public sealed class ServiceUsageView : UserControl
     private readonly Label serviceCount = new();
     private readonly Label serviceDetails = new();
     private readonly FlowLayoutPanel serviceActions = new();
+    private readonly NumericUpDown quantityInput = new() { Minimum = 1, Maximum = 999, Value = 1, Width = 65 };
+    private readonly Button btnRecord = new() { Text = "Nhận", Width = 95, Height = 50 };
     private ServiceItem? selectedService;
 
     public ServiceUsageView(Action<string, object?> navigate)
@@ -121,12 +123,28 @@ public sealed class ServiceUsageView : UserControl
         serviceGrid.SelectionChanged += (_, _) => ServiceSelected();
         panel.Controls.Add(serviceGrid, 0, 0);
         // Phần thông tin
-        var detailsPanel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 1, Padding = new Padding(8) };
-        detailsPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        var detailsPanel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Padding = new Padding(8) };
+        detailsPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 75));
+        detailsPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
         serviceDetails.Dock = DockStyle.Fill;
         serviceDetails.Font = new Font("Segoe UI", 9.5f);
-        serviceDetails.Text = "Chọn một dịch vụ từ danhprivate Control BuildArea()\n{\n    var panel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1 };\n    panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 70)); // Bảng danh mục dịch vụ (70%)\n    panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30)); // Phần thông tin chi tiết (30%)\n\n    // Cấu hình DataGridView bên trái\n    serviceGrid.Dock = DockStyle.Fill;\n    serviceGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;\n    serviceGrid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;\n    serviceGrid.ReadOnly = true;\n    serviceGrid.MultiSelect = false;\n    serviceGrid.AllowUserToAddRows = false;\n    serviceGrid.RowHeadersVisible = false;\n    serviceGrid.SelectionChanged += (_, _) => ServiceSelected();\n    panel.Controls.Add(serviceGrid, 0, 0);\n\n    // Phần thông tin bên phải (Thu gọn lại, cho text chiếm trọn 100% không gian)\n    var detailsPanel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 1, Padding = new Padding(8) };\n    detailsPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));\n\n    serviceDetails.Dock = DockStyle.Fill;\n    serviceDetails.Font = new Font(\"Segoe UI\", 9.5f);\n    serviceDetails.Text = \"Chọn một dịch vụ từ danh sách để xem chi tiết.\";\n    detailsPanel.Controls.Add(serviceDetails, 0, 0);\n\n    panel.Controls.Add(detailsPanel, 1, 0);\n    return panel;\n} sách để xem chi tiết.";
+        serviceDetails.Text = "Chọn một dịch vụ từ danh sách";
         detailsPanel.Controls.Add(serviceDetails, 0, 0);
+        var actionRow = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
+        actionRow.Controls.Add(new Label { Text = "Số lượng:", AutoSize = true, Margin = new Padding(0, 6, 4, 0) });
+        actionRow.Controls.Add(quantityInput);
+        btnRecord.Margin = new Padding(8, 0, 0, 0);
+        btnRecord.Click += (_, _) =>
+        {
+            if (selectedService == null)
+            {
+                MessageBox.Show("Vui lòng chọn một dịch vụ trước");
+                return;
+            }
+            MessageBox.Show($"Đã ghi nhận {(int)quantityInput.Value}x {selectedService.ServiceName}");
+        };
+        actionRow.Controls.Add(btnRecord);
+        detailsPanel.Controls.Add(actionRow, 0, 1);
         panel.Controls.Add(detailsPanel, 1, 0);
         return panel;
     }
@@ -242,4 +260,5 @@ public sealed class ServiceUsageView : UserControl
         public string StatusText => IsActive ? "Đang cung cấp" : "Ngừng cung cấp";
         public string UnitPriceDisplay => UnitPrice.ToString("N0") + " đ";
     }
+
 }
