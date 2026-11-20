@@ -242,4 +242,18 @@ public sealed class ServiceCatalogView : UserControl
         public string StatusText => IsActive ? "Đang cung cấp" : "Ngừng cung cấp";
         public string UnitPriceDisplay => UnitPrice.ToString("N0") + " đ";
     }
+
+    /// <summary>
+    /// Required method for Designer support - do not modify
+    /// the contents of this method with the code editor.
+    /// </summary>
+    private void InitializeComponent()
+    {
+        SuspendLayout();
+        //
+        // ServiceCatalogView
+        //
+        Size = new System.Drawing.Size(561, 654);
+        ResumeLayout(false);
+    }
 }
