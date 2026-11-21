@@ -6,6 +6,7 @@ using HotelManagement.Infrastructure.Data.Repositories;
 using HotelManagement.WinForms.Forms.Dashboard;
 using HotelManagement.WinForms.Forms.Invoices;
 using HotelManagement.WinForms.Forms.Main;
+using HotelManagement.WinForms.Forms.Rooms;
 using HotelManagement.WinForms.Forms.Services;
 
 namespace HotelManagement.WinForms;
@@ -55,6 +56,7 @@ internal static class Program
                     mainForm.NavigateToScreen,
                     context)
             );
+            mainForm.RegisterPage("S05", _=> new RoomFormView(roomService, floorService, mainForm.NavigateToScreen));
             mainForm.RegisterPage(
                 "S07",
                 _ => new CustomersListView(mainForm.NavigateToScreen)
