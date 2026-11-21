@@ -20,8 +20,7 @@ public sealed class InvoiceListView : UserControl
     private readonly Label invoiceCount = new();
     private readonly Label invoiceDetails = new();
     private readonly FlowLayoutPanel invoiceActions = new();
-    private readonly NumericUpDown quantityInput = new() { Minimum = 1, Maximum = 999, Value = 1, Width = 65 };
-    private readonly Button btnRecord = new() { Text = "Nhận", Width = 95, Height = 50 };
+    private readonly Button btnPrintInvoice = new() { Text = "In hóa đơn", AutoSize = true, Padding = new Padding(8, 4, 8, 4), Visible = false };
     private InvoiceItem? selectedInvoice;
 
     public InvoiceListView(Action<string, object?> navigate)
@@ -129,19 +128,17 @@ public sealed class InvoiceListView : UserControl
         invoiceDetails.Text = "Chọn một hóa đơn từ danh sách";
         detailsPanel.Controls.Add(invoiceDetails, 0, 0);
         var actionRow = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
-        actionRow.Controls.Add(new Label { Text = "Số lượng:", AutoSize = true, Margin = new Padding(0, 6, 4, 0) });
-        actionRow.Controls.Add(quantityInput);
-        btnRecord.Margin = new Padding(8, 0, 0, 0);
-        btnRecord.Click += (_, _) =>
+        btnPrintInvoice.Margin = new Padding(0, 4, 0, 0);
+        btnPrintInvoice.Click += (_, _) =>
         {
             if (selectedInvoice == null)
             {
                 MessageBox.Show("Vui lòng chọn một hóa đơn trước");
                 return;
             }
-            MessageBox.Show($"Đã nhận {(int)quantityInput.Value}x {selectedInvoice.InvoiceCode}");
+            MessageBox.Show($"Đang in hóa đơn {selectedInvoice.InvoiceCode}");
         };
-        actionRow.Controls.Add(btnRecord);
+        actionRow.Controls.Add(btnPrintInvoice);
         detailsPanel.Controls.Add(actionRow, 0, 1);
 
         panel.Controls.Add(detailsPanel, 1, 0);
@@ -175,7 +172,6 @@ public sealed class InvoiceListView : UserControl
              inv.RoomCode.ToLower().Contains(keyword)) &&
             (printFilter == "Tất cả trạng thái" || inv.PrintStatusText == printFilter)
         ).ToList();
-
         invoiceGrid.DataSource = filtered;
         invoiceCount.Text = $"Danh sách hóa đơn ({filtered.Count}/{invoices.Count} bản ghi)";
         UpdateThongKe();
@@ -190,7 +186,6 @@ public sealed class InvoiceListView : UserControl
             invoices.Count(inv => inv.IsPaid),
             invoices.Count(inv => !inv.IsPaid)
         };
-
         for (var i = 0; i < counts.Length; i++)
         {
             if (panel.Controls[i] is Label lbl)
@@ -199,6 +194,8 @@ public sealed class InvoiceListView : UserControl
             }
         }
     }
+
+    //Hàm kiểm tra lựa chọn
     private void InvoiceSelected()
     {
         if (invoiceGrid.SelectedRows.Count > 0 && invoiceGrid.SelectedRows[0].DataBoundItem is InvoiceItem item)
@@ -217,9 +214,11 @@ public sealed class InvoiceListView : UserControl
 
         if (invoice == null)
         {
+            btnPrintInvoice.Visible = false;
             invoiceDetails.Text = "Chọn một hóa đơn từ danh sách để xem chi tiết.";
             return;
         }
+        btnPrintInvoice.Visible = !invoice.IsPrinted;
         invoiceDetails.Text =
             $"[ THÔNG TIN CHI TIẾT ]\n\n" +
             $"Mã hóa đơn: {invoice.InvoiceCode}\n" +
