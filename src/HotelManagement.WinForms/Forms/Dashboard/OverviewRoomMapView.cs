@@ -1,29 +1,38 @@
 using System.Drawing;
 using System.Windows.Forms;
+using HotelManagement.Core.DTOs;
+using HotelManagement.Core.Entities;
+using HotelManagement.Core.Enums;
+using HotelManagement.Core.Services;
+using HotelManagement.WinForms.Common;
 
 namespace HotelManagement.WinForms.Forms.Dashboard;
 
-/// <summary>
 /// S01 - Tổng quan và sơ đồ phòng.
-/// Hiện tại chỉ dùng dữ liệu minh họa; chưa truy cập SQL Server.
-/// </summary>
 public sealed class OverviewRoomMapView : UserControl
 {
-    private readonly Action<string, object?> navigate;
-    private readonly List<RoomItem> rooms;
-    private readonly ComboBox floorFilter = new();
-    private readonly ComboBox statusFilter = new();
-    private readonly FlowLayoutPanel roomList = new();
-    private readonly FlowLayoutPanel roomActions = new();
-    private readonly TableLayoutPanel statisticPanel = new();
-    private readonly Label roomCount = new();
-    private readonly Label roomDetails = new();
-    private RoomItem? selectedRoom;
+    private readonly RoomService _roomService;
+    private readonly FloorService _floorService;
+    private readonly Action<string, object?> _navigate;
+    private readonly ComboBox _floorFilter = new();
+    private readonly ComboBox _statusFilter = new();
+    private readonly FlowLayoutPanel _roomList = new();
+    private readonly FlowLayoutPanel _roomActions = new();
+    private readonly TableLayoutPanel _statistics = new();
+    private readonly Label _roomCount = new();
+    private readonly Label _roomDetails = new();
+    private readonly Label[] _statisticLabels = new Label[5];
+    private List<RoomDashboardDto> _rooms = new();
+    private RoomDashboardDto? _selectedRoom;
+    private readonly DashboardConText? _context;
 
-    public OverviewRoomMapView(Action<string, object?> navigate)
+    public OverviewRoomMapView(RoomService roomService, FloorService floorService, Action<string, object> navigate,
+        object? context = null)
     {
-        this.navigate = navigate ?? throw new ArgumentNullException(nameof(navigate));
-        rooms = LoadRooms();
+        _roomService = roomService;
+        _floorService = floorService;
+        _navigate = navigate;
+        _context = context as DashboardConText;
 
         Dock = DockStyle.Fill;
         Padding = new Padding(12);
@@ -51,12 +60,11 @@ public sealed class OverviewRoomMapView : UserControl
         layout.Controls.Add(BuildRoomArea(), 0, 4);
         Controls.Add(layout);
 
-        InitializeFilters();
-        RefreshDashboard();
+        LoadDashboard();
 
-        #if DEBUG
+#if DEBUG
         DebugPrintAllDatabaseData();
-        #endif
+#endif
     }
 
     private Control BuildHeader()
@@ -69,57 +77,55 @@ public sealed class OverviewRoomMapView : UserControl
             Font = new Font("Segoe UI", 15, FontStyle.Bold),
             Margin = new Padding(0, 5, 16, 0)
         });
+        panel.Controls.Add(CreateButton("Lam moi", LoadDashboard));
         return panel;
     }
 
     private Control BuildStatistics()
     {
-        var panel = statisticPanel;
-        panel.Dock = DockStyle.Fill;
-        panel.ColumnCount = 5;
-        panel.RowCount = 1;
+        _statistics.Dock = DockStyle.Fill;
+        _statistics.ColumnCount = 5;
+        _statistics.RowCount = 1;
         for (var i = 0; i < 5; i++)
-            panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20));
-
-        string[] titles = { "Tổng phòng", "Phòng trống", "Đang có khách", "Đang dọn", "Đã đặt trước" };
-        for (var i = 0; i < titles.Length; i++)
         {
-            var item = new Label
+            _statistics.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20));
+            _statisticLabels[i] = new Label()
             {
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleCenter,
                 BorderStyle = BorderStyle.FixedSingle,
-                Text = titles[i] + "\n0",
+                Text = "0",
                 Margin = new Padding(2)
             };
-            panel.Controls.Add(item, i, 0);
+            _statistics.Controls.Add(_statisticLabels[i], i, 0);
         }
-        return panel;
+        return _statistics;
     }
 
     private Control BuildFilters()
     {
         var panel = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
         panel.Controls.Add(new Label { Text = "Tầng", AutoSize = true, Margin = new Padding(0, 8, 5, 0) });
-        floorFilter.Width = 120;
-        panel.Controls.Add(floorFilter);
+        _floorFilter.Width = 135;
+        panel.Controls.Add(_floorFilter);
         panel.Controls.Add(new Label { Text = "Trạng thái", AutoSize = true, Margin = new Padding(12, 8, 5, 0) });
-        statusFilter.Width = 145;
-        panel.Controls.Add(statusFilter);
-        panel.Controls.Add(CreateButton("Quản lý tầng", () => navigate("S02", null)));
-        panel.Controls.Add(CreateButton("Loại phòng", () => navigate("S03", null)));
-        panel.Controls.Add(CreateButton("Danh sách phòng", () => navigate("S05", null)));
+        _statusFilter.Width = 150;
+        panel.Controls.Add(_statusFilter);
+        panel.Controls.Add(CreateButton("Quản lý tầng", () => _navigate("S02", null)));
+        panel.Controls.Add(CreateButton("Loại phòng", () => _navigate("S03", null)));
+        panel.Controls.Add(CreateButton("Danh sách phòng", () => _navigate("S05", null)));
+        _statusFilter.SelectedIndexChanged += (_, _) => RefreshDashboard();
         return panel;
     }
 
     private static Control BuildLegend()
     {
         var panel = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
-        panel.Controls.Add(new Label { Text = "Chú giải:", AutoSize = true, Margin = new Padding(0, 5, 8, 0) });
-        AddLegendItem(panel, "Trống", Color.LightGreen);
-        AddLegendItem(panel, "Đang ở", Color.LightCoral);
-        AddLegendItem(panel, "Đang dọn", Color.Khaki);
-        AddLegendItem(panel, "Đặt trước", Color.PeachPuff);
+        panel.Controls.Add(new Label { Text = "Chi tiết:", AutoSize = true, Margin = new Padding(0, 5, 8, 0) });
+        AddLegendItem(panel, "Trống", Color.Green);
+        AddLegendItem(panel, "Đang ở", Color.Red);
+        AddLegendItem(panel, "Đang dọn", Color.Yellow);
+        AddLegendItem(panel, "Đặt trước", Color.DarkOrange);
         return panel;
     }
 
@@ -131,217 +137,239 @@ public sealed class OverviewRoomMapView : UserControl
         panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
         panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
-        roomCount.Text = "Danh sách phòng";
-        roomCount.Dock = DockStyle.Fill;
-        panel.Controls.Add(roomCount, 0, 0);
+        _roomCount.Text = "Danh sách phòng";
+        _roomCount.Dock = DockStyle.Fill;
+        panel.Controls.Add(_roomCount, 0, 0);
+        panel.Controls.Add(new Label
+        {
+            Text = "Thông tin phòng",
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleLeft
+        }, 1, 0);
 
-        var detailsTitle = new Label { Text = "Thông tin phòng", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
-        panel.Controls.Add(detailsTitle, 1, 0);
+        _roomList.Dock = DockStyle.Fill;
+        _roomList.AutoScroll = true;
+        _roomList.WrapContents = true;
+        panel.Controls.Add(_roomList, 0, 1);
 
-        roomList.Dock = DockStyle.Fill;
-        roomList.AutoScroll = true;
-        roomList.WrapContents = true;
-        panel.Controls.Add(roomList, 0, 1);
-
-        var details = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, Padding = new Padding(8) };
+        var details = new TableLayoutPanel
+            { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, Padding = new Padding(8) };
         details.RowStyles.Add(new RowStyle(SizeType.Percent, 60));
         details.RowStyles.Add(new RowStyle(SizeType.Absolute, 35));
         details.RowStyles.Add(new RowStyle(SizeType.Percent, 40));
-        roomDetails.Dock = DockStyle.Fill;
-        roomDetails.Text = "Chọn một phòng để xem thông tin.";
-        details.Controls.Add(roomDetails, 0, 0);
-        details.Controls.Add(new Label { Text = "Thao tác", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft }, 0, 1);
-        roomActions.Dock = DockStyle.Fill;
-        roomActions.FlowDirection = FlowDirection.TopDown;
-        roomActions.WrapContents = false;
-        details.Controls.Add(roomActions, 0, 2);
+        _roomDetails.Dock = DockStyle.Fill;
+        _roomDetails.Text = "Chọn một phòng để xem thông tin.";
+        details.Controls.Add(_roomDetails, 0, 0);
+        details.Controls.Add(new Label { Text = "Thao tác", Dock = DockStyle.Fill }, 0, 1);
+        _roomActions.Dock = DockStyle.Fill;
+        _roomActions.FlowDirection = FlowDirection.TopDown;
+        _roomActions.WrapContents = false;
+        details.Controls.Add(_roomActions, 0, 2);
         panel.Controls.Add(details, 1, 1);
         return panel;
     }
 
-    private void InitializeFilters()
+    private void LoadDashboard()
     {
-        // TODO (tích hợp CSDL): nạp tầng đang hoạt động qua FloorService.
-        floorFilter.Items.Add("Tất cả tầng");
-        foreach (var floor in rooms.Select(room => room.FloorNumber).Distinct().OrderBy(number => number))
-            floorFilter.Items.Add($"Tầng {floor}");
-        floorFilter.SelectedIndex = 0;
+        try
+        {
+            _rooms = _roomService.GetRoomsByFloor().ToList();
+            _selectedRoom = null;
+            SelectRoom(null);
+            LoadFilters();
+            RefreshDashboard();
+            SelectRoom(_rooms.FirstOrDefault(room => room.RoomId == _context?.RoomId));
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("Lỗi tải dữ liệu", ex.Message);
+        }
+    }
 
-        statusFilter.Items.Add("Tất cả trạng thái");
-        statusFilter.Items.AddRange(new object[] { "Trống", "Đang có khách", "Đang dọn", "Đã đặt trước" });
-        statusFilter.SelectedIndex = 0;
+    private void FloorFilterChange(object? sender, EventArgs e) => RefreshDashboard();
 
-        floorFilter.SelectedIndexChanged += (_, _) => RefreshDashboard();
-        statusFilter.SelectedIndexChanged += (_, _) => RefreshDashboard();
+
+
+    private void LoadFilters()
+    {
+        var selectedFloorId = _context?.FloorId;
+        _floorFilter.SelectedIndexChanged -= FloorFilterChange;
+        _floorFilter.Items.Clear();
+        _floorFilter.Items.Add(new FloorFilterItem(null, "Tất cả tầng"));
+        foreach (Floor floor in _floorService.GetFloors())
+        {
+            _floorFilter.Items.Add(new FloorFilterItem(floor.FloorId, $"Tầng{floor.FloorNumber} = {floor.FloorName}"));
+        }
+
+        _floorFilter.DisplayMember = nameof(FloorFilterItem.Text);
+        _floorFilter.SelectedIndex = 0;
+        if (selectedFloorId.HasValue)
+        {
+            for (var i = 0; i < _floorFilter.Items.Count; i++)
+            {
+                if (_floorFilter.Items[i] is FloorFilterItem item && item.FloorId == selectedFloorId)
+                {
+                    _floorFilter.SelectedIndex = i;
+                    break;
+                }
+            }
+        }
+
+        _statusFilter.Items.Clear();
+        _statusFilter.Items.Add(new StatusFilterItem(null, "Tất cả trạng thái"));
+        _statusFilter.Items.Add(new StatusFilterItem(RoomStatus.Available, "Trống"));
+        _statusFilter.Items.Add(new StatusFilterItem(RoomStatus.Occupied, "Đang có khách"));
+        _statusFilter.Items.Add(new StatusFilterItem(RoomStatus.Cleaning, "Đang dọn dẹp"));
+        _statusFilter.Items.Add(new StatusFilterItem(RoomStatus.Reserved, "Đã đặc trước"));
+        _statusFilter.DisplayMember = nameof(StatusFilterItem.Text);
+        _statusFilter.SelectedIndex = 0;
+        _floorFilter.SelectedIndexChanged += FloorFilterChange;
     }
 
     private void RefreshDashboard()
     {
-        // TODO (tích hợp CSDL): nếu tải theo bộ lọc, truyền FloorId/RoomStatus cho RoomService; không viết SQL tại đây.
-        var floorText = floorFilter.SelectedItem?.ToString() ?? "Tất cả tầng";
-        var statusText = statusFilter.SelectedItem?.ToString() ?? "Tất cả trạng thái";
-        var filteredRooms = rooms.Where(room =>
-            (floorText == "Tất cả tầng" || floorText == $"Tầng {room.FloorNumber}") &&
-            (statusText == "Tất cả trạng thái" || statusText == GetStatusText(room.Status))).ToList();
-
-        roomCount.Text = $"Danh sách phòng ({filteredRooms.Count})";
+        if ((_floorFilter.SelectedItem is not FloorFilterItem floorItem) ||
+        (_statusFilter.SelectedItem is not StatusFilterItem statusItem))
+        return;
+        var filteredRooms = _rooms.Where(room =>
+            (!floorItem.FloorId.HasValue || room.FloorId == floorItem.FloorId.Value) &&
+            (!statusItem.Status.HasValue || room.Status == statusItem.Status.Value));
+        var roomDashboardDtos = filteredRooms as RoomDashboardDto[] ?? filteredRooms.ToArray();
+        _roomCount.Text = $"Danh sách phòng ({roomDashboardDtos.Count()})";
         UpdateStatistics();
-        roomList.Controls.Clear();
+        _roomList.Controls.Clear();
 
-        foreach (var room in filteredRooms)
+        foreach (var room in roomDashboardDtos)
         {
             var button = new Button
             {
-                Text = $"{room.RoomCode}\n{room.RoomTypeName} - {room.HourlyRate:N0} đ/giờ\n{GetStatusText(room.Status)}",
-                Size = new Size(155, 82),
+                Text = $"{room.RoomCode}\n{room.TypeName} - {room.HourlyRate:N0} đ/giờ \n{GetStatusText(room.Status)}",
+                Size = new Size(165, 88),
                 BackColor = GetStatusColor(room.Status),
                 UseVisualStyleBackColor = false,
                 Margin = new Padding(4)
             };
             button.Click += (_, _) => SelectRoom(room);
-            roomList.Controls.Add(button);
+            _roomList.Controls.Add(button);
         }
 
-        if (selectedRoom != null && !filteredRooms.Contains(selectedRoom))
+        if (_selectedRoom != null && !roomDashboardDtos.Any(room => room.RoomId == _selectedRoom.RoomId))
             SelectRoom(null);
     }
 
     private void UpdateStatistics()
     {
-        var panel = statisticPanel;
-        var names = new[] { "Tổng phòng", "Phòng trống", "Đang có khách", "Đang dọn", "Đã đặt trước" };
-        var counts = new[]
+        var labels = new[]
         {
-            rooms.Count,
-            rooms.Count(room => room.Status == RoomDisplayStatus.Available),
-            rooms.Count(room => room.Status == RoomDisplayStatus.Occupied),
-            rooms.Count(room => room.Status == RoomDisplayStatus.Cleaning),
-            rooms.Count(room => room.Status == RoomDisplayStatus.Reserved)
+            $"Tổng phòng \n {_rooms.Count}",
+            $"Phòng trống \n {_rooms.Count(room => room.Status == RoomStatus.Available)}",
+            $"Phòng có khách \n {_rooms.Count(room => room.Status == RoomStatus.Occupied)}",
+            $"Đang dọn \n {_rooms.Count(room => room.Status == RoomStatus.Cleaning)}",
+            $"Đã đặt trước \n {_rooms.Count(room => room.Status == RoomStatus.Reserved)}"
         };
-
-        for (var i = 0; i < counts.Length; i++)
-            ((Label)panel.Controls[i]).Text = $"{names[i]}\n{counts[i]}";
+        for (var i = 0; i < labels.Length; i++)
+            _statisticLabels[i].Text = labels[i];
     }
 
-    private void SelectRoom(RoomItem? room)
+    private void SelectRoom(RoomDashboardDto? room)
     {
-        selectedRoom = room;
-        roomActions.Controls.Clear();
+        _selectedRoom = room;
+        _roomActions.Controls.Clear();
         if (room == null)
         {
-            roomDetails.Text = "Chọn một phòng để xem thông tin.";
+            _roomDetails.Text = "Chọn một phòng để xem thông tin.";
             return;
         }
 
         var relatedRecord = room.ReservationId.HasValue
-            ? $"Đặt phòng liên quan: {room.ReservationId}"
-            : room.StayId.HasValue ? $"Lượt lưu trú: {room.StayId}" : "";
-        roomDetails.Text = $"Mã phòng: {room.RoomCode}\nTầng: {room.FloorNumber}\nLoại phòng: {room.RoomTypeName}\nGiá giờ: {room.HourlyRate:N0} đ\nGiá ngày: {room.DailyRate:N0} đ\nTrạng thái: {GetStatusText(room.Status)}\n{relatedRecord}";
+            ? $"ReservationId: {room.ReservationId}"
+            : room.StayId.HasValue
+                ? $"StayId: {room.StayId}"
+                : "";
+        _roomDetails.Text = $"Mã phòng: {room.RoomCode}\n" +
+                            $"Tầng: {room.FloorNumber} - {room.FloorName}\n" +
+                            $"Loại phòng: {room.TypeName}\n" +
+                            $"Gía theo giờ: {room.HourlyRate:N0}Đ\n" +
+                            $"Gía theo ngày: {room.DailyRate:N0}Đ\n" +
+                            $"Trạng thái: {GetStatusText(room.Status)}\n" +
+                            $"Trạng thái lưu trú: {GetStayStatusText(room.StayStatus)}\n" +
+                            $"Ghi chú: {room.Note ?? "Không có ghi chú"} \n {relatedRecord}";
 
         switch (room.Status)
         {
-            case RoomDisplayStatus.Available:
+            case RoomStatus.Available:
                 AddAction("Nhận phòng", "S11", room.RoomId);
                 AddAction("Đặt phòng", "S10", room.RoomTypeId);
                 break;
-            case RoomDisplayStatus.Reserved:
+            case RoomStatus.Reserved:
                 if (room.ReservationId.HasValue)
                 {
                     AddAction("Xem đặt phòng", "S09", room.ReservationId.Value);
                     AddAction("Check-in", "S11", room.RoomId);
                 }
+
                 break;
-            case RoomDisplayStatus.Occupied:
+            case RoomStatus.Occupied:
                 if (room.StayId.HasValue)
                 {
                     AddAction("Xem lưu trú", "S12", room.StayId.Value);
                     AddAction("Ghi dịch vụ", "S15", room.StayId.Value);
                     AddAction("Trả phòng", "S16", room.StayId.Value);
                 }
+
                 break;
-            case RoomDisplayStatus.Cleaning:
+            case RoomStatus.Cleaning:
                 AddAction("Mở dọn phòng", "S19", room.RoomId);
                 break;
         }
     }
 
-    private void AddAction(string text, string screenCode, int contextId)
+    private void AddAction(string text, string screenCode, int id)
     {
-        roomActions.Controls.Add(CreateButton(text, () => navigate(screenCode, contextId)));
+        _roomActions.Controls.Add(CreateButton(text, () => _navigate(screenCode, id)));
     }
 
-    private List<RoomItem> LoadRooms()
+    private static Button CreateButton(string text, Action action)
     {
-        // TODO (tích hợp CSDL): lấy danh sách phòng qua RoomService/DTO.
-        // RoomId, RoomCode, FloorId/FloorNumber, RoomTypeId,
-        // tên loại phòng, giá giờ/ngày, RoomStatus và ReservationId/StayId đang hiệu lực.
-        return CreateSampleRooms();
-    }
-
-    private static List<RoomItem> CreateSampleRooms() => new()
-    {
-        new(1, "101", 1, 1, "Standard", 100000, 500000, RoomDisplayStatus.Available),
-        new(2, "102", 1, 1, "Standard", 100000, 500000, RoomDisplayStatus.Occupied, StayId: 601),
-        new(3, "103", 1, 2, "Deluxe", 150000, 750000, RoomDisplayStatus.Reserved, ReservationId: 501),
-        new(4, "104", 1, 2, "Deluxe", 150000, 750000, RoomDisplayStatus.Cleaning),
-        new(5, "201", 2, 1, "Standard", 100000, 500000, RoomDisplayStatus.Available),
-        new(6, "202", 2, 1, "Standard", 100000, 500000, RoomDisplayStatus.Occupied, StayId: 602),
-        new(7, "203", 2, 2, "Deluxe", 150000, 750000, RoomDisplayStatus.Reserved, ReservationId: 502),
-        new(8, "204", 2, 2, "Deluxe", 150000, 750000, RoomDisplayStatus.Available),
-        new(9, "301", 3, 1, "Standard", 100000, 500000, RoomDisplayStatus.Occupied, StayId: 603),
-        new(10, "302", 3, 1, "Standard", 100000, 500000, RoomDisplayStatus.Cleaning),
-        new(11, "303", 3, 2, "Deluxe", 150000, 750000, RoomDisplayStatus.Reserved, ReservationId: 503),
-        new(12, "304", 3, 2, "Deluxe", 150000, 750000, RoomDisplayStatus.Available)
-    };
-
-    private static Button CreateButton(string text, Action onClick)
-    {
-        var button = new Button { Text = text, AutoSize = true, Margin = new Padding(5) };
-        button.Click += (_, _) => onClick();
+        var button = new Button { Text = text, AutoSize = true, Margin = new Padding(4) };
+        button.Click += (_, _) => action();
         return button;
     }
 
     private static void AddLegendItem(FlowLayoutPanel panel, string text, Color color)
     {
-        panel.Controls.Add(new Panel { BackColor = color, Size = new Size(14, 14), Margin = new Padding(8, 6, 3, 0) });
-        panel.Controls.Add(new Label { Text = text, AutoSize = true, Margin = new Padding(0, 5, 4, 0) });
+        panel.Controls.Add(new Panel { BackColor = color, Size =  new Size(14,14), Margin =new Padding(8, 6,3,0)});
+        panel.Controls.Add(new Label{ Text = text, AutoSize = true, Margin = new Padding(0 , 5, 4,0)});
+
     }
 
-    private static string GetStatusText(RoomDisplayStatus status) => status switch
+    private static string GetStayStatusText(StayStatus? status) => status switch
     {
-        RoomDisplayStatus.Available => "Trống",
-        RoomDisplayStatus.Occupied => "Đang có khách",
-        RoomDisplayStatus.Cleaning => "Đang dọn",
-        RoomDisplayStatus.Reserved => "Đã đặt trước",
-        _ => "Không xác định"
+        StayStatus.InProgress => "Đang ở",
+        StayStatus.CheckoutPending => "Đang chờ hoàn tất trả phòng",
+        StayStatus.Completed => "Đã hoàn tất", _ => "Đang không có khách ở"
     };
 
-    private static Color GetStatusColor(RoomDisplayStatus status) => status switch
+    private static string GetStatusText(RoomStatus status) => status switch
     {
-        RoomDisplayStatus.Available => Color.Green,
-        RoomDisplayStatus.Occupied => Color.Red,
-        RoomDisplayStatus.Cleaning => Color.Yellow,
-        RoomDisplayStatus.Reserved => Color.DarkOrange,
+        RoomStatus.Available => "Trống",
+        RoomStatus.Occupied => "Đang có khách",
+        RoomStatus.Cleaning => "Đang dọn",
+        RoomStatus.Reserved => "Đã đặt trước",
+        _ => "Không thể xác định"
+    };
+
+    private static Color GetStatusColor(RoomStatus status) => status switch
+    {
+        RoomStatus.Available => Color.Green,
+        RoomStatus.Occupied => Color.Red,
+        RoomStatus.Cleaning => Color.Yellow,
+        RoomStatus.Reserved => Color.DarkOrange,
         _ => SystemColors.Control
     };
 
-    private sealed record RoomItem(
-        int RoomId,
-        string RoomCode,
-        int FloorNumber,
-        int RoomTypeId,
-        string RoomTypeName,
-        decimal HourlyRate,
-        decimal DailyRate,
-        RoomDisplayStatus Status,
-        int? ReservationId = null,
-        int? StayId = null);
-
-    private enum RoomDisplayStatus { Available, Occupied, Cleaning, Reserved }
-
-
-
-
+    private sealed record FloorFilterItem(int? FloorId, string Text);
+    private sealed record StatusFilterItem(RoomStatus? Status, string Text);
 #if DEBUG
 // Chỉ in Database một lần khi mở Dashboard.
 private static bool databaseDumped;
@@ -405,10 +433,10 @@ private static void DebugPrintAllDatabaseData()
 
         connection.Open();
 
-        System.Console.WriteLine(
+        Console.WriteLine(
             $"Database: {connection.DataSource}");
 
-        System.Console.WriteLine(
+        Console.WriteLine(
             $"SQLite Version: {connection.ServerVersion}");
 
         // Lấy danh sách tất cả bảng nghiệp vụ.
@@ -428,7 +456,7 @@ private static void DebugPrintAllDatabaseData()
                 tableNames.Add(reader.GetString(0));
         }
 
-        System.Console.WriteLine(
+        Console.WriteLine(
             $"\nTổng số bảng: {tableNames.Count}");
 
         int totalRecords = 0;
@@ -436,9 +464,9 @@ private static void DebugPrintAllDatabaseData()
         // Đọc toàn bộ bản ghi của từng bảng.
         foreach (string tableName in tableNames)
         {
-            System.Console.WriteLine("\n----------------------------------------------");
-            System.Console.WriteLine($"TABLE: {tableName}");
-            System.Console.WriteLine("----------------------------------------------");
+            Console.WriteLine("\n----------------------------------------------");
+            Console.WriteLine($"TABLE: {tableName}");
+            Console.WriteLine("----------------------------------------------");
 
             using var command = connection.CreateCommand();
 
@@ -474,32 +502,34 @@ private static void DebugPrintAllDatabaseData()
                         $"{reader.GetName(i)} = {displayValue}");
                 }
 
-                System.Console.WriteLine(
+                Console.WriteLine(
                     $"[{rowCount}] {string.Join(" | ", values)}");
             }
 
             if (rowCount == 0)
-                System.Console.WriteLine("(Không có dữ liệu)");
+                Console.WriteLine("(Không có dữ liệu)");
 
             totalRecords += rowCount;
 
-            System.Console.WriteLine(
+            Console.WriteLine(
                 $"Số bản ghi: {rowCount}");
         }
 
-        System.Console.WriteLine("\n==============================================");
-        System.Console.WriteLine(" DATABASE READ COMPLETED");
-        System.Console.WriteLine($" Tổng số bảng: {tableNames.Count}");
-        System.Console.WriteLine($" Tổng số bản ghi: {totalRecords}");
-        System.Console.WriteLine("==============================================");
+        Console.WriteLine("\n==============================================");
+        Console.WriteLine(" DATABASE READ COMPLETED");
+        Console.WriteLine($" Tổng số bảng: {tableNames.Count}");
+        Console.WriteLine($" Tổng số bản ghi: {totalRecords}");
+        Console.WriteLine("==============================================");
     }
     catch (Exception ex)
     {
-        System.Console.WriteLine("\nDATABASE READ FAILED:");
-        System.Console.WriteLine(ex);
+        Console.WriteLine("\nDATABASE READ FAILED:");
+        Console.WriteLine(ex);
     }
 }
 
 #endif
 
 }
+
+
