@@ -121,6 +121,8 @@ public sealed class CustomersListView : UserControl
         var btnExport = CreateButton("xuat ex", Color.FromArgb(75, 91, 112));
         btnExport.Width = 100;
         btnExport.Click +=(_,_)=> MessageBox.Show(this,"chuc nang xuat ex","Xuat du lieu",MessageBoxButtons.OK,MessageBoxIcon.Information);
+        header.Controls.Add(titlePanel, 0, 0);
+        header.Controls.Add(button, 1, 0);
         button.Controls.Add(btnAdd);
         button.Controls.Add(btnExport);
         return header;

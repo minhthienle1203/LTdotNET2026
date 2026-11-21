@@ -1,4 +1,5 @@
 using System.Text.Json;
+using HotelManagement.Core.Entities;
 using HotelManagement.Core.Services;
 using HotelManagement.Infrastructure.Data;
 using HotelManagement.WinForms.Forms.Customers;
@@ -60,6 +61,15 @@ internal static class Program
             mainForm.RegisterPage(
                 "S07",
                 _ => new CustomersListView(mainForm.NavigateToScreen)
+            );
+            mainForm.RegisterPage(
+                "S08",
+                param => param switch
+                {
+                    Customer c => new CustomerFormView(mainForm.NavigateToScreen, c),
+                    CustomerFormContext ctx => new CustomerFormView(mainForm.NavigateToScreen, null, ctx),
+                    _ => new CustomerFormView(mainForm.NavigateToScreen)
+                }
             );
 
             // Đăng kí trang S13
