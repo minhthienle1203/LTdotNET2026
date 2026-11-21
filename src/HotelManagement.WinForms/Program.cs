@@ -1,9 +1,15 @@
 using System.Text.Json;
+using HotelManagement.Core.Entities;
+using HotelManagement.Core.Services;
 using HotelManagement.Infrastructure.Data;
 using HotelManagement.WinForms.Forms.Customers;
+using HotelManagement.Infrastructure.Data.Repositories;
 using HotelManagement.WinForms.Forms.Dashboard;
+using HotelManagement.WinForms.Forms.Invoices;
 using HotelManagement.WinForms.Forms.Main;
+using HotelManagement.WinForms.Forms.Rooms;
 using HotelManagement.WinForms.Forms.Services;
+
 namespace HotelManagement.WinForms;
 
 internal static class Program
@@ -23,29 +29,47 @@ internal static class Program
                 File.ReadAllText(settingsPath));
 
             string connectionString = settings.RootElement
-                                          .GetProperty("ConnectionStrings")
-                                          .GetProperty("HotelManagementDb")
-                                          .GetString()
-                                      ?? throw new Exception("Connection String không hợp lệ.");
+                .GetProperty("ConnectionStrings")
+                .GetProperty("HotelManagementDb")
+                .GetString()
+                ?? throw new Exception("Connection String không hợp lệ.");
 
             // kết nối SQLite
-            var connectionFactory =
-                new DbConnectionFactory(connectionString);
+            var connectionFactory = new DbConnectionFactory(connectionString);
 
             // khởi tạo Database
             new DbInitializer().Initialize(connectionFactory);
 
-            // Chỉ tạo một MainForm.
-            var mainForm = new MainForm();
+            //dang ki cac repo, service
+            var floorRepository = new FloorRepository(connectionFactory);
+            var roomRepository = new RoomRepository(connectionFactory);
+            var floorService = new FloorService(floorRepository);
+            var roomService = new RoomService(roomRepository);
+            // tạo một MainForm cố định
 
-            // Đăng kí trang S01
+            var mainForm = new MainForm();
+            // đăng kí các trang để load lên
             mainForm.RegisterPage(
                 "S01",
-                _ => new OverviewRoomMapView(mainForm.NavigateToScreen)
+                context => new OverviewRoomMapView(
+                    roomService,
+                    floorService,
+                    mainForm.NavigateToScreen,
+                    context)
             );
+            mainForm.RegisterPage("S05", _=> new RoomFormView(roomService, floorService, mainForm.NavigateToScreen));
             mainForm.RegisterPage(
                 "S07",
                 _ => new CustomersListView(mainForm.NavigateToScreen)
+            );
+            mainForm.RegisterPage(
+                "S08",
+                param => param switch
+                {
+                    Customer c => new CustomerFormView(mainForm.NavigateToScreen, c),
+                    CustomerFormContext ctx => new CustomerFormView(mainForm.NavigateToScreen, null, ctx),
+                    _ => new CustomerFormView(mainForm.NavigateToScreen)
+                }
             );
 
             // Đăng kí trang S13
@@ -53,12 +77,16 @@ internal static class Program
                 "S13",
                 _ => new ServiceCatalogView(mainForm.NavigateToScreen)
             );
-            // Đăng kí trang S14
+            // Đăng kí trang S15
             mainForm.RegisterPage(
-                "S14",
+                "S15",
                 _ => new ServiceUsageView(mainForm.NavigateToScreen)
             );
-
+            // Đăng kí trang S17
+            mainForm.RegisterPage(
+                "S17",
+                _ => new InvoiceListView(mainForm.NavigateToScreen)
+            );
 
             Application.Run(mainForm);
         }
