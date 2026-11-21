@@ -210,7 +210,7 @@ public sealed class CustomerFormView : UserControl
             Margin = new Padding(0, 0, 8, 0),
             AutoScroll = true
         };
-        ề
+
         var header = new Panel { Height = 66 };
         var right = new Label
         {
@@ -418,7 +418,7 @@ public sealed class CustomerFormView : UserControl
         _chkVip.Checked = TryGet(_customer, "IsVip") is true;
         _chkSyncBca.Checked = _isNew;
 
-        _lblRank.Text = _isNew ? "Khách hàng mới "
+        _lblRank.Text = _isNew ? "Khách hàng mới )"
             : _chkVip.Checked ? "VIP" : "Khách hiện hữu";
 
         UpdateIdentityHintAndLimit();
@@ -637,6 +637,199 @@ public sealed class CustomerFormView : UserControl
 
         return base.ProcessCmdKey(ref msg, keyData);
     }
+     private static string NormalizeName(string value) =>
+        Regex.Replace(value.Trim(), @"\s+", " ").ToUpper(new CultureInfo("vi-VN"));
 
+    private static bool IsPassportValue(object? value)
+    {
+        string text = value?.ToString() ?? string.Empty;
+        return text.Contains("passport", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("hochieu", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("hộ chiếu", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static object ResolveIdentityType(bool passport)
+    {
+        Type type = Nullable.GetUnderlyingType(IdentityTypeProp.PropertyType) ?? IdentityTypeProp.PropertyType;
+        if (!type.IsEnum)
+            return passport ? "Hộ chiếu" : "CCCD";
+
+        string[] names = Enum.GetNames(type);
+        string? match = names.FirstOrDefault(n => passport
+            ? n.Contains("passport", StringComparison.OrdinalIgnoreCase)
+              || n.Contains("hochieu", StringComparison.OrdinalIgnoreCase)
+            : n.Contains("cccd", StringComparison.OrdinalIgnoreCase)
+              || n.Contains("citizen", StringComparison.OrdinalIgnoreCase)
+              || n.Contains("cmnd", StringComparison.OrdinalIgnoreCase));
+
+        match ??= names[passport ? Math.Min(1, names.Length - 1) : 0];
+        return Enum.Parse(type, match);
+    }
+
+    private static object? TryGet(object target, string propertyName)
+    {
+        try
+        {
+            return target.GetType().GetProperty(propertyName)?.GetValue(target);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static void TrySet(object target, string propertyName, object? value)
+    {
+        var prop = target.GetType().GetProperty(propertyName);
+        if (prop is null || !prop.CanWrite) return;
+
+        try
+        {
+            Type type = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
+            if (value is null)
+                prop.SetValue(target, null);
+            else if (type.IsInstanceOfType(value))
+                prop.SetValue(target, value);
+            else
+                prop.SetValue(target, Convert.ChangeType(value, type));
+        }
+        catch
+        {
+        }
+    }
+    private static void StackTop(Control parent, params Control[] topToBottom)
+    {
+        for (int i = topToBottom.Length - 1; i >= 0; i--)
+        {
+            topToBottom[i].Dock = DockStyle.Top;
+            parent.Controls.Add(topToBottom[i]);
+        }
+    }
+
+    private static Label Lbl(string text, int height, float size, bool bold, Color color) => new()
+    {
+        Text = text,
+        AutoSize = false,
+        Height = height,
+        Font = new Font("Arial", size, bold ? FontStyle.Bold : FontStyle.Regular),
+        ForeColor = color,
+        TextAlign = ContentAlignment.MiddleLeft
+    };
+
+    private static Label Hint(string text) => new() { Text = text };
+
+    private static Panel MakeCard(int height, params Control[] topToBottom)
+    {
+        var outer = new Panel { Height = height, Padding = new Padding(0, 0, 0, 10) };
+        var inner = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Color.White,
+            Padding = new Padding(14, 10, 14, 10)
+        };
+        StackTop(inner, topToBottom);
+        outer.Controls.Add(inner);
+        return outer;
+    }
+
+    private static Panel Section(string number, string title, int height, Control body)
+    {
+        var outer = new Panel { Height = height, Padding = new Padding(0, 0, 0, 14) };
+        var head = new Label
+        {
+            Text = $"{number}. {title}",
+            Dock = DockStyle.Top,
+            Height = 30,
+            TextAlign = ContentAlignment.MiddleLeft,
+            Font = new Font("Arial", 10, FontStyle.Bold),
+            ForeColor = Navy
+        };
+        body.Dock = DockStyle.Fill;
+        outer.Controls.Add(body);
+        outer.Controls.Add(head);
+        return outer;
+    }
+
+    private static TableLayoutPanel NewGrid(int columns, params int[] rowHeights)
+    {
+        var grid = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = columns,
+            RowCount = rowHeights.Length,
+            BackColor = Color.White
+        };
+        for (int c = 0; c < columns; c++)
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / columns));
+        foreach (int h in rowHeights)
+            grid.RowStyles.Add(new RowStyle(SizeType.Absolute, h));
+        return grid;
+    }
+
+    private static void Place(TableLayoutPanel grid, Control control, int column, int row, int columnSpan)
+    {
+        control.Dock = DockStyle.Fill;
+        grid.Controls.Add(control, column, row);
+        if (columnSpan > 1)
+            grid.SetColumnSpan(control, columnSpan);
+    }
+
+    private static Panel Field(string caption, Control input, Label? hint = null)
+    {
+        var box = new Panel { Margin = new Padding(0, 0, 12, 0) };
+
+        bool multiline = input is TextBox { Multiline: true };
+        input.Dock = multiline ? DockStyle.Fill : DockStyle.Top;
+        if (input is TextBoxBase or ComboBox or DateTimePicker)
+            input.Font = new Font("Arial", 9.5f);
+
+        var head = new Panel { Dock = DockStyle.Top, Height = 22 };
+        var cap = new Label
+        {
+            Text = caption,
+            Dock = DockStyle.Left,
+            AutoSize = true,
+            TextAlign = ContentAlignment.MiddleLeft,
+            Font = new Font("Arial", 8.5f, FontStyle.Bold),
+            ForeColor = Color.FromArgb(50, 65, 85)
+        };
+
+        hint ??= new Label();
+        hint.AutoSize = false;
+        hint.Dock = DockStyle.Fill;
+        hint.TextAlign = ContentAlignment.MiddleRight;
+        if (hint.ForeColor == SystemColors.ControlText) hint.ForeColor = Muted;
+        if (hint.Font.Size > 8) hint.Font = new Font("Arial", 7.5f);
+
+        head.Controls.Add(hint);
+        head.Controls.Add(cap);
+
+        box.Controls.Add(input);
+        box.Controls.Add(head);
+        return box;
+    }
+
+    private static Button CreateButton(string text, Color color, int width)
+    {
+        var button = new Button
+        {
+            Text = text,
+            Width = width,
+            Height = 32,
+            BackColor = color,
+            ForeColor = Color.White,
+            FlatStyle = FlatStyle.Flat,
+            Font = new Font("Arial", 8, FontStyle.Bold),
+            Cursor = Cursors.Hand,
+            Margin = new Padding(3),
+            UseVisualStyleBackColor = false
+        };
+        button.FlatAppearance.BorderSize = 0;
+        button.FlatAppearance.MouseOverBackColor = ControlPaint.Light(color, 0.12f);
+        return button;
+    }
 }
+
+
+
 
