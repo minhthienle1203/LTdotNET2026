@@ -4,6 +4,7 @@ using HotelManagement.Infrastructure.Data;
 using HotelManagement.WinForms.Forms.Customers;
 using HotelManagement.Infrastructure.Data.Repositories;
 using HotelManagement.WinForms.Forms.Dashboard;
+using HotelManagement.WinForms.Forms.Invoices;
 using HotelManagement.WinForms.Forms.Main;
 using HotelManagement.WinForms.Forms.Services;
 
@@ -64,10 +65,15 @@ internal static class Program
                 "S13",
                 _ => new ServiceCatalogView(mainForm.NavigateToScreen)
             );
-            // Đăng kí trang S14
+            // Đăng kí trang S15
             mainForm.RegisterPage(
-                "S14",
+                "S15",
                 _ => new ServiceUsageView(mainForm.NavigateToScreen)
+            );
+            // Đăng kí trang S17
+            mainForm.RegisterPage(
+                "S17",
+                _ => new InvoiceListView(mainForm.NavigateToScreen)
             );
 
             Application.Run(mainForm);
