@@ -1,19 +1,28 @@
 
+using HotelManagement.Core.Entities;
+using HotelManagement.Core.Enums;
+using HotelManagement.Core.Services;
 using HotelManagement.WinForms.Common;
 
 namespace HotelManagement.WinForms.Forms.Rooms;
 
 public sealed class RoomListView : UserControl
 {
+    private readonly RoomService _roomService;
+    private readonly FloorService _floorService;
     private readonly Action<string, object>? _navigate;
     private readonly RoomListContext _context;
     private readonly TextBox _search = new();
     private readonly DataGridView _grid = new();
 
     public RoomListView(
+        RoomService roomService,
+        FloorService floorService,
         Action<string, object>? navigate,
         object? context = null)
     {
+        _roomService = roomService ?? throw new ArgumentNullException(nameof(roomService));
+        _floorService = floorService ?? throw new ArgumentNullException(nameof(floorService));
         _navigate = navigate ?? throw new ArgumentNullException(nameof(navigate));
         _context = context as RoomListContext ?? (context is int roomTypeId
             ? new RoomListContext(RoomTypeId: roomTypeId)
@@ -82,8 +91,32 @@ public sealed class RoomListView : UserControl
 
     private void LoadRooms()
     {
-        throw new NotImplementedException();
+        try
+        {
+            var rooms = _roomService.GetRooms(_search.Text);
+            _grid.Rows.Clear();
+            foreach (var room in rooms)
+            {
+                int index = _grid.Rows.Add(room.RoomCode, $"{room.FloorNumber} - {room.FloorName}",
+                                                          $"{room.TypeCode} - {room.TypeName}",
+                    GetStatusText(room.Status), room.Note ?? string.Empty, room.IsActive ? "Đang hoạt động" : "Ngừng hoạt động");
+                _grid.Rows[index].Tag = room;
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Không thể tải danh sách phòng",  MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
+
+    private static string GetStatusText(RoomStatus roomStatus) => roomStatus switch
+    {
+        RoomStatus.Available => "Trống",
+        RoomStatus.Reserved => "Đã đặt trước",
+        RoomStatus.Occupied => "Đang có khách",
+        RoomStatus.Cleaning => "Đang dọn",
+        _ => "Không thể các định"
+    };
 
     private static Button MakeButton(string text, Action action)
     {

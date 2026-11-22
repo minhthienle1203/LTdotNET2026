@@ -173,7 +173,7 @@ public sealed class MainForm : Form
         };
         menu.Controls.Add(new Label { Text = "PHÂN HỆ NGHIỆP VỤ", Width = 210, Height = 15, ForeColor = Color.Silver, Font = new Font("Segoe UI", 9, FontStyle.Bold), Margin = new Padding(1, 0, 1, 3) });
         AddGroup(menu, "1. TỔNG QUAN", ("S01", "S01 - Tổng quan và sơ đồ phòng"));
-        AddGroup(menu, "2. QUẢN LÝ PHÒNG", ("S02", "S02 - Quản lý tầng"), ("S03", "S03 - Danh sách loại phòng"), ("S05", "S05 - Danh sách phòng"));
+        AddGroup(menu, "2. QUẢN LÝ PHÒNG", ("S05", "S05 - Danh sách phòng"));
         AddGroup(menu, "3. KHÁCH HÀNG", ("S07", "S07 - Danh sách khách hàng"));
         AddGroup(menu, "4. ĐẶT PHÒNG", ("S09", "S09 - Danh sách đặt phòng"));
         AddGroup(menu, "5. LỄ TÂN", ("S11", "S11 - Nhận phòng (Check-in)"), ("S12", "S12 - Lưu trú đang diễn ra"));

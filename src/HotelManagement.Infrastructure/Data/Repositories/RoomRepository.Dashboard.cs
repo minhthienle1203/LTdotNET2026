@@ -1,4 +1,5 @@
 using HotelManagement.Core.DTOs;
+using HotelManagement.Core.Entities;
 using HotelManagement.Core.Enums;
 using HotelManagement.Core.Interfaces;
 using HotelManagement.Infrastructure.Data;
@@ -12,7 +13,7 @@ public sealed partial class RoomRepository : IRoomRepository
     {
         _connectionFactory = connectionFactory;
     }
-
+    //lay phong theo tang
     public List<RoomDashboardDto> GetRoomsByFloor(int? floorId)
     {
         const string sql = @"SELECT r.RoomId, r.RoomCode, r.FloorId, f.FloorNumber, f.FloorName,
@@ -68,7 +69,7 @@ public sealed partial class RoomRepository : IRoomRepository
         }
         return rooms;
     }
-
+    // lay phong theo trang thai
     public RoomStatus? GetRoomStatus(int roomId)
     {
         const string sql = "SELECT Status FROM Room WHERE RoomId = $roomId LIMIT 1;";
@@ -84,4 +85,80 @@ public sealed partial class RoomRepository : IRoomRepository
             return null;
         return Enum.Parse<RoomStatus>(Convert.ToString(value)!, ignoreCase: false);
     }
+    //lay phong cho trang quan ly
+    public List<RoomListDto> GetRooms(string? keyword, int? floorId, int? roomTypeId, RoomStatus? status,
+        bool? isActive)
+    {
+        const string sql = @"SELECT r.RoomId, r.RoomCode, r.FloorId, f.FloorNumber, f.FloorName,
+                                r.RoomTypeId, rt.TypeCode, rt.TypeName, r.Status, r.Note, r.IsActive,
+                                rt.HourlyRate, rt.DailyRate
+                                FROM Room r
+                                INNER JOIN Floor f ON f.FloorId = r.FloorId
+                                INNER JOIN RoomType rt ON rt.RoomTypeId = r.RoomTypeId
+                                WHERE ($keyword IS NULL OR r.RoomCode LIKE '%' || $keyword || '%')
+                                AND ($floorId IS NULL OR r.FloorId = $floorId)
+                                AND ($roomTypeId IS NULL OR r.RoomTypeId = $roomTypeId)
+                                AND ($status IS NULL OR r.Status = $status)
+                                AND ($isActive IS NULL OR r.IsActive = $isActive)
+                                ORDER BY f.SortOrder, f.FloorNumber, r.RoomCode;";
+
+        var result = new List<RoomListDto>();
+        using var connection = _connectionFactory.CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        command.Parameters.AddWithValue("$keyword", (object?)keyword ?? DBNull.Value);
+        command.Parameters.AddWithValue("$floorId", (object?)floorId ?? DBNull.Value);
+        command.Parameters.AddWithValue("$roomTypeId", (object?)roomTypeId ?? DBNull.Value);
+        command.Parameters.AddWithValue("$status", (object?)status?.ToString() ?? DBNull.Value);
+        command.Parameters.AddWithValue("$isActive",
+            isActive.HasValue ? (object)(isActive.Value ? 1 : 0) : DBNull.Value);
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            result.Add(new RoomListDto
+            {
+                RoomId = reader.GetInt32(0),
+                RoomCode = reader.GetString(1),
+                FloorId = reader.GetInt32(2),
+                FloorNumber = reader.GetInt32(3),
+                FloorName = reader.GetString(4),
+                RoomTypeId = reader.GetInt32(5),
+                TypeCode =  reader.GetString(6),
+                TypeName = reader.GetString(7),
+                Status = Enum.Parse<RoomStatus>(reader.GetString(8)),
+                Note  = reader.IsDBNull(9) ? null : reader.GetString(9),
+                IsActive = reader.GetInt64(10) == 1,
+                HourlyRate = SqliteValueConverter.FromVnd(reader, 11),
+                DailyRate = SqliteValueConverter.FromVnd(reader, 12),
+            });
+        }
+        return result;
+    }
+    //lay room theo id
+    public Room? GetRoomById(int roomId)
+    {
+        const string sql = @" SELECT RoomId, RoomCode, FloorId, RoomTypeId, Status, Note, IsActive
+                            FROM Room
+                            WHERE RoomId = $roomId LIMIT 1;";
+        using var connection = _connectionFactory.CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        command.Parameters.AddWithValue("$RoomId", roomId);
+        using var reader = command.ExecuteReader();
+        if(!reader.Read()) return null;
+        return new Room
+        {
+            RoomId = reader.GetInt32(0),
+            RoomCode = reader.GetString(1),
+            FloorId = reader.GetInt32(2),
+            RoomTypeId = reader.GetInt32(3),
+            Status = Enum.Parse<RoomStatus>(reader.GetString(4)),
+            Note = reader.IsDBNull(5) ? null : reader.GetString(5),
+            IsActive = reader.GetInt64(6) == 1
+        };
+
+    }
+
 }
