@@ -57,7 +57,8 @@ internal static class Program
                     mainForm.NavigateToScreen,
                     context)
             );
-            mainForm.RegisterPage("S05", _=> new RoomFormView(roomService, floorService, mainForm.NavigateToScreen));
+            mainForm.RegisterPage("S05", _ => new RoomListView(mainForm.NavigateToScreen));
+            mainForm.RegisterPage("S06", _=> new RoomFormView(mainForm.NavigateToScreen));
             mainForm.RegisterPage(
                 "S07",
                 _ => new CustomersListView(mainForm.NavigateToScreen)

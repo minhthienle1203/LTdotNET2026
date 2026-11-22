@@ -6,8 +6,8 @@ namespace HotelManagement.WinForms.Forms.Rooms;
 
 public sealed class RoomFormView : UserControl
 {
-    private readonly RoomService _roomService;
-    private readonly FloorService _floorService;
+    private readonly RoomService? _roomService;
+    private readonly FloorService? _floorService;
     //roomtype
     private readonly Action<string, object?> _navigate;
     private readonly TextBox _roomCode = new();
@@ -16,17 +16,17 @@ public sealed class RoomFormView : UserControl
     private readonly TextBox _note = new();
     private readonly CheckBox _isActive = new() {Text = "Đang hoạt động"};
     private readonly Label _status = new();
-    private readonly RoomFormContext _context;
+    private readonly RoomFormContext? _context;
 
     public RoomFormView(
-        RoomService roomService,
-        FloorService floorService,
+    //    RoomService roomService,
+    //    FloorService floorService,
         Action<string, object?> navigate
      //   object? context
     )
     {
-        _roomService = roomService;
-        _floorService = floorService;
+    //    _roomService = roomService;
+    //   _floorService = floorService;
         _navigate = navigate;
      //   _context = context as RoomFormContext ?? new RoomFormContext();
         Dock = DockStyle.Fill;
@@ -79,9 +79,11 @@ public sealed class RoomFormView : UserControl
         Controls.Add(root);
     }
 
-    private Control? MakeButton(string lưu, object saveRoom)
+    private Control? MakeButton(string text, Action action)
     {
-        throw new NotImplementedException();
+       var button = new Button {Text = text, AutoSize = true, Margin = new Padding(4)};
+       button.Click += (_, _) => action();
+       return button;
     }
 
     private void SaveRoom()
@@ -91,7 +93,7 @@ public sealed class RoomFormView : UserControl
 
     private void ReturnToDashboard()
     {
-        _navigate("S01", _context.ReturnContext);
+        _navigate("S01", new DashboardConText());
     }
     private static void AddField(TableLayoutPanel panel, int row, string label, Control control)
     {
