@@ -35,7 +35,7 @@ public sealed class RoomFormView : UserControl
         Dock = DockStyle.Fill;
         Padding = new Padding(18);
         _error.ContainerControl = this;
-        _roomCode.Leave += (_roomCode, _) => ValidateRoomCode();
+        _roomCode.Leave += (_, _) => ValidateRoomCode();
         Disposed += (_,_) => _error.Dispose();
 
         BuildLayout();
@@ -57,7 +57,7 @@ public sealed class RoomFormView : UserControl
         foreach (var floor in _floorService.GetFloors())
         {
             _floor.Items.Add(new FloorOption(
-                floor.FloorId, $"Tầng {floor.FloorNumber} - {floor.FloorName}"
+                floor.FloorId, $"{floor.FloorName}"
                 ));
         }
         _floor.DisplayMember = nameof(FloorOption.Text);
@@ -66,9 +66,10 @@ public sealed class RoomFormView : UserControl
         foreach (var roomType in _roomService.GetActiveRoomTypes())
         {
             _roomType.Items.Add(new RoomTypeOption(
-                roomType.RoomTypeId, $"Loại phòng: {roomType.TypeCode} - {roomType.TypeName}"
+                roomType.RoomTypeId, $"{roomType.TypeName}"
             ));
         }
+        _roomType.DisplayMember = nameof(RoomTypeOption.Text);
     }
     private sealed record RoomTypeOption(int Id, string Text);
 
@@ -79,6 +80,9 @@ public sealed class RoomFormView : UserControl
         {
             _status.Text = "Trống"; //mặc định khi tạo mới
             _isActive.Checked = true;
+            //load sẵn tầng và loại của phòng đang chọn
+            SelectFloorById(_context.FloorId);
+            SelectRoomTypeById(_context.RoomTypeId);
             return;
         }
         var room = _roomService.GetRoomById(_context.RoomId.Value) ??
@@ -87,7 +91,7 @@ public sealed class RoomFormView : UserControl
         _note.Text = room.Note ?? string.Empty;
         _isActive.Checked = room.IsActive;
         _status.Text = GetStatusText(room.Status);
-        SelectFloorById(room.RoomId);
+        SelectFloorById(room.FloorId);
         SelectRoomTypeById(room.RoomTypeId);
     }
 
@@ -104,12 +108,12 @@ public sealed class RoomFormView : UserControl
         }
     }
 
-    private void SelectFloorById(int? roomId)
+    private void SelectFloorById(int? floorId)
     {
-        if(!roomId.HasValue) return;
+        if(!floorId.HasValue) return;
         for (int i = 0; i < _floor.Items.Count; i++)
         {
-            if (_floor.Items[i] is FloorOption floorOption && floorOption.Id == roomId.Value)
+            if (_floor.Items[i] is FloorOption floorOption && floorOption.Id == floorId.Value)
             {
                 _floor.SelectedIndex = i;
                 return;
@@ -172,6 +176,7 @@ public sealed class RoomFormView : UserControl
         if (floor is null)
         {
             _error.SetError(_floor, "Phải chọn tầng");
+            valid = false;
         }
 
         if (roomType is null)

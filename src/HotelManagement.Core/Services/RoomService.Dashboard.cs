@@ -60,9 +60,9 @@ public sealed partial class RoomService
         ValidateRoom(room);
         if (_repository.IsRoomCodeExists(room.RoomCode))
             throw new InvalidOperationException("Mã phòng đã tồn tại");
-        if (_repository.IsFloorActive(room.FloorId))
+        if (!_repository.IsFloorActive(room.FloorId))
             throw new InvalidOperationException("Tầng được chọn hiện không thể sử dụng");
-        if (_repository.IsRoomTypeActive(room.RoomTypeId))
+        if (!_repository.IsRoomTypeActive(room.RoomTypeId))
             throw new InvalidOperationException("Loại phòng được chọn hiện không thể sử dụng");
         room.Status = RoomStatus.Available;
         return _repository.InsertRoom(room);
@@ -96,7 +96,7 @@ public sealed partial class RoomService
             throw new InvalidOperationException(" Mã phòng bị trùng với phòng khác");
         if (!_repository.IsFloorActive(room.FloorId))
             throw new InvalidOperationException("Tầng được chọn hiện không khả dụng hoặc không tồn tại ");
-        if (_repository.IsRoomTypeActive(room.RoomTypeId))
+        if (!_repository.IsRoomTypeActive(room.RoomTypeId))
             throw new InvalidOperationException("Loại phòng được chọn hiện không khả dụng hoặc không tồn tại ");
         //ngăn thay đổi trạng thái phòng đang có khách
         if (!room.IsActive && current.Status != RoomStatus.Available)
