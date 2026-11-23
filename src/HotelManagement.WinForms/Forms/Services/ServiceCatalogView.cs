@@ -23,16 +23,13 @@ public sealed class ServiceCatalogView : UserControl
     private readonly Label serviceCount = new();
     private readonly Label serviceDetails = new();
     private readonly FlowLayoutPanel serviceActions = new();
-
     private static readonly string[] Stat =
     {
         "TỔNG DỊCH VỤ",
         "ĐANG CUNG CẤP",
         "NGỪNG CUNG CẤP"
     };
-
     private ServiceItem? selectedService;
-
     public ServiceCatalogView(Action<string, object?> navigate)
     {
         this.navigate = navigate ?? throw new ArgumentNullException(nameof(navigate));
