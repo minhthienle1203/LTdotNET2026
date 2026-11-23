@@ -350,6 +350,44 @@ public sealed class ReservationListView : UserControl
         if (Selected == null) return;
         navigate("S11", Selected.ReservationId);
     }
+    private void CancelSelected()
+    {
+        var item = Selected;
+        if (item == null) return;
 
+        var answer = MessageBox.Show(this,
+            $"Hủy đặt phòng {item.ReservationCode} của khách {item.CustomerName}?",
+            "Xác nhận hủy", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+        if (answer != DialogResult.Yes) return;
+        var index = allItems.FindIndex(x => x.ReservationId == item.ReservationId);
+        allItems[index] = item with { Status = ReservationStatus.Cancelled };
+        ApplyFilter(item.ReservationId);
+    }
+
+    public sealed record ReservationItem(
+        int ReservationId,
+        string ReservationCode,
+        string CustomerName,
+        string CustomerPhone,
+        DateTime ExpectedCheckIn,
+        DateTime ExpectedCheckOut,
+        string RoomTypeName,
+        string? RoomCode,
+        decimal DepositAmount,
+        ReservationStatus Status,
+        string? Note)
+    {
+        public string RoomText => RoomCode ?? "(Chưa gán - giữ theo loại)";
+
+        public string StatusText => Status switch
+        {
+            ReservationStatus.Confirmed => "Đã xác nhận",
+            ReservationStatus.CheckedIn => "Đã nhận phòng",
+            ReservationStatus.Completed => "Hoàn tất",
+            ReservationStatus.Cancelled => "Đã hủy",
+            ReservationStatus.NoShow => "Không đến",
+            _ => Status.ToString()
+        };
+    }
 
 }

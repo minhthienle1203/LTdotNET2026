@@ -8,6 +8,7 @@ using HotelManagement.WinForms.Forms.Dashboard;
 using HotelManagement.WinForms.Forms.Housekeeping;
 using HotelManagement.WinForms.Forms.Invoices;
 using HotelManagement.WinForms.Forms.Main;
+using HotelManagement.WinForms.Forms.Reservations;
 using HotelManagement.WinForms.Forms.Rooms;
 using HotelManagement.WinForms.Forms.Services;
 
@@ -73,6 +74,11 @@ internal static class Program
                     _ => new CustomerFormView(mainForm.NavigateToScreen)
                 }
             );
+            mainForm.RegisterPage(
+                "S09",
+                ctx => new ReservationListView(mainForm.NavigateToScreen, ctx)
+            );
+
 
             // Đăng kí trang S13
             mainForm.RegisterPage(
