@@ -20,14 +20,12 @@ public sealed class ServiceUsageView : UserControl
     private readonly TableLayoutPanel ThongKePanel = new();
     private readonly Label serviceCount = new();
     private readonly Label serviceDetails = new();
-    private readonly FlowLayoutPanel serviceActions = new();
     private readonly NumericUpDown quantityInput = new() { Minimum = 1, Maximum = 999, Value = 1, Width = 65 };
-    private readonly Button btnRecord = new() { Text = "Nhận", Width = 95, Height = 50 };
+    private readonly Button btnRecord = new() { Text = "Thêm", Width = 75, Height = 40 };
     private readonly Label totalAmountLabel = new()
     {
         Text = "Tổng tiền: 0 đ",
         AutoSize = true,
-        Font = new Font("Segoe UI", 9.5f),
         Margin = new Padding(10, 6, 4, 0)
     };
     private ServiceItem? selectedService;
@@ -55,6 +53,8 @@ public sealed class ServiceUsageView : UserControl
         layout.Controls.Add(BuildHeader(), 0, 0);
         layout.Controls.Add(BuildThongKe(), 0, 1);
         layout.Controls.Add(BuildFilters(), 0, 2);
+        serviceCount.Dock = DockStyle.Fill;
+        serviceCount.TextAlign = ContentAlignment.MiddleLeft;
         layout.Controls.Add(serviceCount, 0, 3);
         layout.Controls.Add(BuildArea(), 0, 4);
         Controls.Add(layout);
@@ -188,7 +188,7 @@ public sealed class ServiceUsageView : UserControl
             (statText == "Tất cả trạng thái" || s.StatusText == statText)
         ).ToList();
         serviceGrid.DataSource = filtered;
-        serviceCount.Text = $"Danh sách dịch vụ ({filtered.Count}/{services.Count} bản ghi)";
+        serviceCount.Text = $"Danh sách dịch vụ (Hiển thị {filtered.Count}/{services.Count})";
         UpdateThongKe();
     }
     private void UpdateThongKe()
@@ -225,11 +225,11 @@ public sealed class ServiceUsageView : UserControl
     private void SelectService(ServiceItem? service)
     {
         selectedService = service;
-        serviceActions.Controls.Clear();
-
+        quantityInput.Value = 1;
         if (service == null)
         {
             serviceDetails.Text = "Chọn một dịch vụ từ danh sách để xem chi tiết.";
+            UpdateTotalAmount();
             return;
         }
 
@@ -242,6 +242,7 @@ public sealed class ServiceUsageView : UserControl
             $"Đơn giá hiện hành: {service.UnitPrice:N0} đ\n" +
             $"Trạng thái: {service.StatusText}\n" +
             $"Mô tả: {service.Description ?? "(Không có mô tả)"}";
+        UpdateTotalAmount();
     }
     private void UpdateTotalAmount()
     {
@@ -261,12 +262,6 @@ public sealed class ServiceUsageView : UserControl
         new(3, "GU01", "Giặt ủi cao cấp", "Giặt ủi", "Chiếc", 100000, "Dịch vụ giặt nhanh", true),
         new(4, "TH01", "Thuê xe Vinfast", "Thuê xe", "Ngày", 890000, "Xe điện đời mới", false)
     };
-    private static Button CreateButton(string text, Action onClick)
-    {
-        var button = new Button { Text = text, AutoSize = true, Margin = new Padding(3) };
-        button.Click += (_, _) => onClick();
-        return button;
-    }
     private sealed record ServiceItem(
         int ServiceId,
         string ServiceCode,
