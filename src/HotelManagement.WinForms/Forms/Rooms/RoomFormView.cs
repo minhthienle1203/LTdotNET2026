@@ -45,13 +45,36 @@ public sealed class RoomFormView : UserControl
         }
 }
 
-    private void LoadOptions()
+    private void LoadOptions() // tầng và loại phòng
     {
-        throw new NotImplementedException();
-    }
+        _floor.Items.Clear();
+        foreach (var floor in _floorService.GetFloors())
+        {
+            _floor.Items.Add(new FloorOption(
+                floor.FloorId, $"Tầng {floor.FloorNumber} - {floor.FloorName}"
+                ));
+        }
+        _floor.DisplayMember = nameof(FloorOption.Text);
 
+        _roomType.Items.Clear();
+        foreach (var roomType in _roomService.GetActiveRoomTypes())
+        {
+            _roomType.Items.Add(new RoomTypeOption(
+                roomType.RoomTypeId, $"Loại phòng: {roomType.TypeCode} - {roomType.TypeName}"
+            ));
+        }
+    }
+    private sealed record RoomTypeOption(int Id, string Text);
+
+    private sealed record FloorOption(int Id, string Text);
     private void LoadRoom()
     {
+        if(!_context.RoomId.HasValue)
+        {
+            _status.Text = "Trống"; //mặc định khi tạo mới
+            _isActive.Checked = true;
+            return;
+        }
         var room = _roomService.GetRoomById(_context.RoomId.Value) ??
                    throw new InvalidOperationException("Không tìm thấy phòng đã chọn");
         _roomCode.Text = room.RoomCode;
