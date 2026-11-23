@@ -23,6 +23,13 @@ public sealed class ServiceUsageView : UserControl
     private readonly FlowLayoutPanel serviceActions = new();
     private readonly NumericUpDown quantityInput = new() { Minimum = 1, Maximum = 999, Value = 1, Width = 65 };
     private readonly Button btnRecord = new() { Text = "Nhận", Width = 95, Height = 50 };
+    private readonly Label totalAmountLabel = new()
+    {
+        Text = "Tổng tiền: 0 đ",
+        AutoSize = true,
+        Font = new Font("Segoe UI", 9.5f),
+        Margin = new Padding(10, 6, 4, 0)
+    };
     private ServiceItem? selectedService;
 
     public ServiceUsageView(Action<string, object?> navigate)
@@ -132,7 +139,9 @@ public sealed class ServiceUsageView : UserControl
         detailsPanel.Controls.Add(serviceDetails, 0, 0);
         var actionRow = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
         actionRow.Controls.Add(new Label { Text = "Số lượng:", AutoSize = true, Margin = new Padding(0, 6, 4, 0) });
+        quantityInput.ValueChanged += (_, _) => UpdateTotalAmount();
         actionRow.Controls.Add(quantityInput);
+        actionRow.Controls.Add(totalAmountLabel);
         btnRecord.Margin = new Padding(8, 0, 0, 0);
         btnRecord.Click += (_, _) =>
         {
@@ -233,6 +242,17 @@ public sealed class ServiceUsageView : UserControl
             $"Đơn giá hiện hành: {service.UnitPrice:N0} đ\n" +
             $"Trạng thái: {service.StatusText}\n" +
             $"Mô tả: {service.Description ?? "(Không có mô tả)"}";
+    }
+    private void UpdateTotalAmount()
+    {
+        if (selectedService == null)
+        {
+            totalAmountLabel.Text = "Tổng tiền: 0 đ";
+            return;
+        }
+
+        var total = selectedService.UnitPrice * quantityInput.Value;
+        totalAmountLabel.Text = $"Tổng tiền: {total:N0} đ";
     }
     private List<ServiceItem> LoadServices() => new()
     {
