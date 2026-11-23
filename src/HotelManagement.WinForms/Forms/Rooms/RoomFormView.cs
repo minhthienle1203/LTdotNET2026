@@ -1,3 +1,4 @@
+using HotelManagement.Core.Entities;
 using HotelManagement.Core.Enums;
 using HotelManagement.WinForms.Common;
 
@@ -18,6 +19,7 @@ public sealed class RoomFormView : UserControl
     private readonly Label _status = new() {AutoSize = true};
     private readonly RoomFormContext? _context;
     private Button? _saveButton;
+    private readonly ErrorProvider _error = new();
 
     public RoomFormView(
         RoomService roomService,
@@ -32,6 +34,10 @@ public sealed class RoomFormView : UserControl
         _context = context as RoomFormContext ?? new RoomFormContext();
         Dock = DockStyle.Fill;
         Padding = new Padding(18);
+        _error.ContainerControl = this;
+        _roomCode.Leave += (_roomCode, _) => ValidateRoomCode();
+        Disposed += (_,_) => _error.Dispose();
+
         BuildLayout();
         try
         {
@@ -41,7 +47,7 @@ public sealed class RoomFormView : UserControl
         catch (Exception ex)
         {
             _saveButton!.Enabled = false;
-            MessageBox.Show(this, ex.Message, "Khong the mo form chinh sua");
+            MessageBox.Show(this, ex.Message, "Khong the mo form chinh sua", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 }
 
@@ -76,7 +82,7 @@ public sealed class RoomFormView : UserControl
             return;
         }
         var room = _roomService.GetRoomById(_context.RoomId.Value) ??
-                   throw new InvalidOperationException("Không tìm thấy phòng đã chọn");
+                   throw new InvalidOperationException("Không tìm thấy phòng đã chọn để sửa");
         _roomCode.Text = room.RoomCode;
         _note.Text = room.Note ?? string.Empty;
         _isActive.Checked = room.IsActive;
@@ -85,14 +91,30 @@ public sealed class RoomFormView : UserControl
         SelectRoomTypeById(room.RoomTypeId);
     }
 
-    private void SelectRoomTypeById(int roomRoomTypeId)
+    private void SelectRoomTypeById(int? roomTypeId)
     {
-        throw new NotImplementedException();
+        if(!roomTypeId.HasValue) return;
+        for (int i = 0; i < _roomType.Items.Count; i++)
+        {
+            if (_roomType.Items[i] is RoomTypeOption roomTypeOption && roomTypeOption.Id == roomTypeId.Value)
+            {
+                _roomType.SelectedIndex = i;
+                return;
+            }
+        }
     }
 
-    private void SelectFloorById(int roomRoomId)
+    private void SelectFloorById(int? roomId)
     {
-        throw new NotImplementedException();
+        if(!roomId.HasValue) return;
+        for (int i = 0; i < _floor.Items.Count; i++)
+        {
+            if (_floor.Items[i] is FloorOption floorOption && floorOption.Id == roomId.Value)
+            {
+                _floor.SelectedIndex = i;
+                return;
+            }
+        }
     }
 
 
@@ -142,9 +164,56 @@ public sealed class RoomFormView : UserControl
 
     private void SaveRoom()
     {
+        _error.Clear();
+        bool valid = ValidateRoomCode();
+        var floor = _floor.SelectedItem as FloorOption;
+        var roomType = _roomType.SelectedItem as RoomTypeOption;
 
+        if (floor is null)
+        {
+            _error.SetError(_floor, "Phải chọn tầng");
+        }
+
+        if (roomType is null)
+        {
+            _error.SetError(_roomType, "Phải chọn phòng đang kinh doanh");
+            valid = false;
+        }
+
+        if (!valid || floor is null || roomType is null) return;
+        try
+        {
+            var room = new Room
+            {
+                RoomId = _context.RoomId ?? 0,
+                RoomCode = _roomCode.Text,
+                FloorId = floor.Id,
+                RoomTypeId = roomType.Id,
+                Note = _note.Text,
+                IsActive = _isActive.Checked
+            };
+            if (_context.RoomId.HasValue)
+                _roomService.UpdateRoom(room);
+            else
+                _roomService.CreateRoom(room);
+            MessageBox.Show(this, "đã lưu thông tin phòng", "Thông báo", MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+            ReturnToList();
+
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Không thể lưu phòng", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
     }
-
+    // kiểm tra giới hạn mã phòng tại form
+    private bool ValidateRoomCode()
+    {
+        string value = _roomCode.Text.Trim();
+        bool valid = value.Length > 0 && value.Length <= 30;
+        _error.SetError(_roomCode, valid ? string.Empty : "Không được bỏ trống mã phòng và không được vượt quá 30 kí tự!");
+        return valid;
+    }
     private void ReturnToList()
     {
         _navigate("S05", _context.ReturnContext ?? new RoomListContext());

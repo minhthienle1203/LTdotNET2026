@@ -1,4 +1,5 @@
 
+using HotelManagement.Core.DTOs;
 using HotelManagement.Core.Entities;
 using HotelManagement.Core.Enums;
 using HotelManagement.Core.Services;
@@ -49,7 +50,7 @@ public sealed class RoomListView : UserControl
         top.Controls.Add(new Label { Text = "Mã Phòng", AutoSize = true, Margin = new Padding(4) });
         _search.Width = 120;
         top.Controls.Add(_search);
-        top.Controls.Add(MakeButton("Tìm", LoadRooms));
+        top.Controls.Add(MakeButton("Tìm kiếm", LoadRooms));
         top.Controls.Add(MakeButton("Thêm phòng", AddRoom));
         top.Controls.Add(MakeButton("Sửa", EditRoom));
         top.Controls.Add(MakeButton("Xem sơ đồ", ShowDashBoard));
@@ -57,6 +58,10 @@ public sealed class RoomListView : UserControl
 
         _grid.Dock = DockStyle.Fill;
         _grid.ReadOnly = true;
+        _grid.AllowUserToAddRows = false;
+        _grid.AllowUserToDeleteRows = false;
+        _grid.AllowUserToResizeColumns = false;
+        _grid.MultiSelect = false; // chỉ chọn được 1 dòng để sửa
         _grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
         _grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
         _grid.RowHeadersVisible = false;
@@ -78,15 +83,33 @@ public sealed class RoomListView : UserControl
     {
         if (_navigate != null) _navigate("S01", new DashboardConText());
     }
-
+    // lấy RoomId từ Tag hiện tại
     private void EditRoom()
     {
-        throw new NotImplementedException();
+        if (_grid.CurrentRow?.Tag is not RoomListDto room)
+        {
+            MessageBox.Show(this, "Hãy chọn một phòng cần sửa", "Chưa chọn phòng", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+        _navigate!("S06", new RoomFormContext(
+            RoomId: room.RoomId,
+            FloorId: room.FloorId,
+            RoomTypeId: room.RoomTypeId,
+            ReturnContext: GetCurrentContext()
+            ));
     }
 
     private void AddRoom()
     {
-        _navigate("S06", new RoomFormContext());
+        _navigate!("S06", new RoomFormContext(ReturnContext: GetCurrentContext()));
+    }
+
+    private RoomListContext GetCurrentContext()
+    {
+        return new RoomListContext(
+            FloorId: _context.FloorId,
+            RoomTypeId: _context.RoomTypeId,
+            Keyword: _search.Text);
     }
 
     private void LoadRooms()
