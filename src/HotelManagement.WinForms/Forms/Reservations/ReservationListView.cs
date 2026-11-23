@@ -219,4 +219,137 @@ public sealed class ReservationListView : UserControl
         button.Click += (_, _) => onClick();
         return button;
     }
+
+
+
+    private List<ReservationItem> LoadReservations()
+    {
+        return CreateSampleReservations();
+    }
+
+    private static List<ReservationItem> CreateSampleReservations() => new()
+    {
+        new(1, "RSV-202611-001", "Nguyễn Hoàng", "0901000001", new DateTime(2026, 11, 16, 14, 0, 0), new DateTime(2026, 11, 17, 12, 0, 0), "Deluxe", "103", 100000, ReservationStatus.Confirmed, "Đặt trước phòng 103"),
+        new(2, "RSV-202611-002", "Trần Quốc Bảo", "0901000002", new DateTime(2026, 11, 18, 14, 0, 0), new DateTime(2026, 11, 19, 12, 0, 0), "Deluxe", "203", 150000, ReservationStatus.Confirmed, "Đặt trước phòng 203"),
+        new(3, "RSV-202611-003", "Lê Thu Hà", "0901000003", new DateTime(2026, 11, 20, 14, 0, 0), new DateTime(2026, 11, 21, 12, 0, 0), "Deluxe", "303", 100000, ReservationStatus.Confirmed, "Đặt trước phòng 303"),
+        new(4, "RSV-202611-004", "Trần Quốc Bảo", "0901000002", new DateTime(2026, 11, 22, 9, 0, 0), new DateTime(2026, 11, 23, 12, 0, 0), "Standard", null, 0, ReservationStatus.Confirmed, "Chỉ giữ chỗ theo loại phòng"),
+        new(5, "RSV-202611-005", "Nguyễn Hoàng", "0901000001", new DateTime(2026, 11, 10, 14, 0, 0), new DateTime(2026, 11, 12, 12, 0, 0), "Standard", "102", 200000, ReservationStatus.CheckedIn, null),
+        new(6, "RSV-202611-006", "Lê Thu Hà", "0901000003", new DateTime(2026, 11, 5, 14, 0, 0), new DateTime(2026, 11, 7, 12, 0, 0), "Deluxe", "104", 0, ReservationStatus.Completed, null),
+        new(7, "RSV-202611-007", "Trần Quốc Bảo", "0901000002", new DateTime(2026, 11, 8, 14, 0, 0), new DateTime(2026, 11, 9, 12, 0, 0), "Standard", null, 0, ReservationStatus.Cancelled, "Khách hủy")
+    };
+
+    private void InitializeFilters()
+    {
+        roomTypeBox.Items.AddRange(new object[] { "Tất cả loại phòng", "Standard", "Deluxe" });
+        roomTypeBox.SelectedIndex = 0;
+
+        statusBox.Items.AddRange(new object[]
+        {
+            "Tất cả trạng thái", "Đã xác nhận", "Đã nhận phòng", "Hoàn tất", "Đã hủy", "Không đến"
+        });
+        statusBox.SelectedIndex = 0;
+    }
+    private void ApplyFilter(int? selectId = null)
+    {
+        var keepId = selectId ?? Selected?.ReservationId;
+
+        if (fromPicker.Checked && toPicker.Checked && fromPicker.Value.Date > toPicker.Value.Date)
+        {
+            MessageBox.Show(this, "'Ngày đến từ' không được lớn hơn 'đến'.", "Bộ lọc không hợp lệ",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        var keyword = keywordBox.Text.Trim();
+        var query = allItems.AsEnumerable();
+
+        if (keyword.Length > 0)
+            query = query.Where(x =>
+                x.ReservationCode.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
+                x.CustomerName.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
+                x.CustomerPhone.Contains(keyword));
+        if (fromPicker.Checked)
+            query = query.Where(x => x.ExpectedCheckIn.Date >= fromPicker.Value.Date);
+        if (toPicker.Checked)
+            query = query.Where(x => x.ExpectedCheckIn.Date <= toPicker.Value.Date);
+        if (roomTypeBox.SelectedIndex > 0)
+            query = query.Where(x => x.RoomTypeName == roomTypeBox.Text);
+        if (statusBox.SelectedIndex > 0)
+            query = query.Where(x => x.Status == (ReservationStatus)(statusBox.SelectedIndex - 1));
+
+        var list = query.OrderBy(x => x.ExpectedCheckIn).ToList();
+        bindingSource.DataSource = list;
+        UpdateSummary(list);
+
+        var index = keepId.HasValue ? list.FindIndex(x => x.ReservationId == keepId.Value) : -1;
+        if (index >= 0) bindingSource.Position = index;
+        ShowDetail();
+    }
+
+    private void ClearFilters()
+    {
+        keywordBox.Clear();
+        fromPicker.Checked = false;
+        toPicker.Checked = false;
+        roomTypeBox.SelectedIndex = 0;
+        statusBox.SelectedIndex = 0;
+        ApplyFilter();
+    }
+
+    private void UpdateSummary(List<ReservationItem> list)
+    {
+        var confirmed = list.Where(x => x.Status == ReservationStatus.Confirmed).ToList();
+
+        summaryLabels[0].Text = $"Tổng đặt phòng\n{list.Count}";
+        summaryLabels[1].Text = $"Đã xác nhận\n{confirmed.Count}";
+        summaryLabels[2].Text = $"Đến trong hôm nay\n{confirmed.Count(x => x.ExpectedCheckIn.Date == DateTime.Today)}";
+        summaryLabels[3].Text = $"Đã nhận phòng\n{list.Count(x => x.Status == ReservationStatus.CheckedIn)}";
+        summaryLabels[4].Text = $"Tiền cọc đang giữ\n{confirmed.Sum(x => x.DepositAmount):N0} đ";
+    }
+
+    private ReservationItem? Selected => bindingSource.Current as ReservationItem;
+
+    private void ShowDetail()
+    {
+        var item = Selected;
+        if (item == null)
+        {
+            detailLabel.Text = "Chọn một đặt phòng để xem chi tiết.";
+            checkInButton.Enabled = false;
+            editButton.Enabled = false;
+            cancelButton.Enabled = false;
+            return;
+        }
+
+        detailLabel.Text =
+            $"Mã đặt phòng: {item.ReservationCode}\n" +
+            $"Trạng thái: {item.StatusText}\n\n" +
+            $"Khách hàng: {item.CustomerName}\n" +
+            $"Điện thoại: {item.CustomerPhone}\n\n" +
+            $"Dự kiến đến: {item.ExpectedCheckIn:dd/MM/yyyy HH:mm}\n" +
+            $"Dự kiến đi: {item.ExpectedCheckOut:dd/MM/yyyy HH:mm}\n\n" +
+            $"Loại phòng: {item.RoomTypeName}\n" +
+            $"Phòng được gán: {item.RoomText}\n" +
+            $"Tiền cọc: {item.DepositAmount:N0} đ\n\n" +
+            $"Ghi chú: {item.Note}";
+
+        var isConfirmed = item.Status == ReservationStatus.Confirmed;
+        checkInButton.Enabled = isConfirmed;
+        cancelButton.Enabled = isConfirmed;
+        editButton.Enabled = true;
+    }
+
+    private void EditSelected()
+    {
+        if (Selected == null) return;
+        navigate("S10", Selected.ReservationId);
+    }
+
+    private void CheckInSelected()
+    {
+        if (Selected == null) return;
+        navigate("S11", Selected.ReservationId);
+    }
+
+
 }
