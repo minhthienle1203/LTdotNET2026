@@ -77,7 +77,7 @@ public sealed class OverviewRoomMapView : UserControl
             Font = new Font("Segoe UI", 15, FontStyle.Bold),
             Margin = new Padding(0, 5, 16, 0)
         });
-        panel.Controls.Add(CreateButton("Lam moi", LoadDashboard));
+        panel.Controls.Add(CreateButton("Làm mới", LoadDashboard));
         return panel;
     }
 
@@ -95,6 +95,7 @@ public sealed class OverviewRoomMapView : UserControl
                 TextAlign = ContentAlignment.MiddleCenter,
                 BorderStyle = BorderStyle.FixedSingle,
                 Text = "0",
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
                 Margin = new Padding(2)
             };
             _statistics.Controls.Add(_statisticLabels[i], i, 0);
@@ -104,16 +105,14 @@ public sealed class OverviewRoomMapView : UserControl
 
     private Control BuildFilters()
     {
-        var panel = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
-        panel.Controls.Add(new Label { Text = "Tầng", AutoSize = true, Margin = new Padding(0, 8, 5, 0) });
+        var panel = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false};
+        panel.Controls.Add(new Label { Text = "Tầng", AutoSize = true, Margin = new Padding(0, 8, 5, 0)});
         _floorFilter.Width = 135;
         panel.Controls.Add(_floorFilter);
         panel.Controls.Add(new Label { Text = "Trạng thái", AutoSize = true, Margin = new Padding(12, 8, 5, 0) });
         _statusFilter.Width = 150;
         panel.Controls.Add(_statusFilter);
-        panel.Controls.Add(CreateButton("Quản lý tầng", () => _navigate("S02", null)));
-        panel.Controls.Add(CreateButton("Loại phòng", () => _navigate("S03", null)));
-        panel.Controls.Add(CreateButton("Danh sách phòng", () => _navigate("S05", null)));
+        panel.Controls.Add(CreateButton("Quản lí danh sách phòng", () => _navigate("S05", null)));
         _statusFilter.SelectedIndexChanged += (_, _) => RefreshDashboard();
         return panel;
     }
@@ -139,12 +138,14 @@ public sealed class OverviewRoomMapView : UserControl
 
         _roomCount.Text = "Danh sách phòng";
         _roomCount.Dock = DockStyle.Fill;
+        _roomCount.Font = new Font("Seoge UI", 11, FontStyle.Bold);
         panel.Controls.Add(_roomCount, 0, 0);
         panel.Controls.Add(new Label
         {
             Text = "Thông tin phòng",
             Dock = DockStyle.Fill,
-            TextAlign = ContentAlignment.MiddleLeft
+            TextAlign = ContentAlignment.MiddleLeft,
+            Font = new Font("Segoe UI", 12 ,FontStyle.Bold)
         }, 1, 0);
 
         _roomList.Dock = DockStyle.Fill;
@@ -160,7 +161,7 @@ public sealed class OverviewRoomMapView : UserControl
         _roomDetails.Dock = DockStyle.Fill;
         _roomDetails.Text = "Chọn một phòng để xem thông tin.";
         details.Controls.Add(_roomDetails, 0, 0);
-        details.Controls.Add(new Label { Text = "Thao tác", Dock = DockStyle.Fill }, 0, 1);
+        details.Controls.Add(new Label { Text = "Thao tác", Dock = DockStyle.Fill, Font = new Font("Segoe UI", 11 ,FontStyle.Bold) }, 0, 1);
         _roomActions.Dock = DockStyle.Fill;
         _roomActions.FlowDirection = FlowDirection.TopDown;
         _roomActions.WrapContents = false;
@@ -198,7 +199,7 @@ public sealed class OverviewRoomMapView : UserControl
         _floorFilter.Items.Add(new FloorFilterItem(null, "Tất cả tầng"));
         foreach (Floor floor in _floorService.GetFloors())
         {
-            _floorFilter.Items.Add(new FloorFilterItem(floor.FloorId, $"Tầng{floor.FloorNumber} = {floor.FloorName}"));
+            _floorFilter.Items.Add(new FloorFilterItem(floor.FloorId, $"Tầng {floor.FloorNumber}"));
         }
 
         _floorFilter.DisplayMember = nameof(FloorFilterItem.Text);
@@ -243,8 +244,8 @@ public sealed class OverviewRoomMapView : UserControl
         {
             var button = new Button
             {
-                Text = $"{room.RoomCode}\n{room.TypeName} - {room.HourlyRate:N0} đ/giờ \n{GetStatusText(room.Status)}",
-                Size = new Size(165, 88),
+                Text = $"{room.RoomCode} \n{room.TypeName.ToUpperInvariant()} \n {room.HourlyRate:N0} đ/giờ \n <<{GetStatusText(room.Status)}>>",
+                Size = new Size(165, 100),
                 BackColor = GetStatusColor(room.Status),
                 UseVisualStyleBackColor = false,
                 Margin = new Padding(4)
@@ -287,7 +288,7 @@ public sealed class OverviewRoomMapView : UserControl
                 ? $"StayId: {room.StayId}"
                 : "";
         _roomDetails.Text = $"Mã phòng: {room.RoomCode}\n" +
-                            $"Tầng: {room.FloorNumber} - {room.FloorName}\n" +
+                            $"Tầng: Tầng {room.FloorNumber}\n" +
                             $"Loại phòng: {room.TypeName}\n" +
                             $"Gía theo giờ: {room.HourlyRate:N0}Đ\n" +
                             $"Gía theo ngày: {room.DailyRate:N0}Đ\n" +
