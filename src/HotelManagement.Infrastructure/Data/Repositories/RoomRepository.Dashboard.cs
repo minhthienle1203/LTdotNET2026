@@ -145,7 +145,7 @@ public sealed partial class RoomRepository : IRoomRepository
         connection.Open();
         using var command = connection.CreateCommand();
         command.CommandText = sql;
-        command.Parameters.AddWithValue("$RoomId", roomId);
+        command.Parameters.AddWithValue("$roomId", roomId);
         using var reader = command.ExecuteReader();
         if(!reader.Read()) return null;
         return new Room
@@ -160,5 +160,108 @@ public sealed partial class RoomRepository : IRoomRepository
         };
 
     }
+    // lay cac loai phong con hoat dong
+    public List<RoomType> GetActiveRoomTypes()
+    {
+        const string sql = @" SELECT RoomTypeId, TypeCode, TypeName FROM RoomType WHERE IsActive = 1
+    ORDER BY TypeName, TypeCode;";
+        var re = new List<RoomType>();
+        using var connection = _connectionFactory.CreateConnection();
+        connection.Open();
 
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            re.Add(new RoomType
+            {
+                RoomTypeId = reader.GetInt32(0),
+                TypeCode = reader.GetString(1),
+                TypeName = reader.GetString(2),
+            });
+        }
+        return re;
+    }
+    // kiem tra ma phong da ton tai chua, tru phong dang chon
+    public bool IsRoomCodeExists(string roomCode, int? excludeRoomId = null)
+    {
+        const string sql = @"SELECT EXISTS (SELECT 1 FROM Room
+                        WHERE RoomCode = $roomCode AND ($excludeRoomId IS NULL OR RoomId <> $excludeRoomId));";
+        using var  connection = _connectionFactory.CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        command.Parameters.AddWithValue("$roomCode", roomCode);
+        command.Parameters.AddWithValue("$excludeRoomId", (object?)excludeRoomId ?? DBNull.Value);
+        return Convert.ToInt64(command.ExecuteScalar()) ==1;
+
+    }
+    // kiem tra tang con hoat dong khong
+    public bool IsFloorActive(int floorId)
+    {
+        const string sql = @" SELECT EXISTS  (SELECT 1 FROM Floor WHERE FloorId = $id AND IsActive = 1);";
+        using var connection = _connectionFactory.CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        command.Parameters.AddWithValue("$id", floorId);
+        return Convert.ToInt64(command.ExecuteScalar()) ==1;
+    }
+    // kiem loai phong con hoat dong khong
+    public bool IsRoomTypeActive(int roomTypeId)
+    {
+        const string sql = @"SELECT EXISTS(SELECT 1 FROM RoomType WHERE RoomTypeId = $id AND IsActive = 1);";
+        using var connection = _connectionFactory.CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        command.Parameters.AddWithValue("$id", roomTypeId);
+        return Convert.ToInt64(command.ExecuteScalar()) ==1;
+    }
+    // them phong vao db, mặc định là đang trống
+    public int InsertRoom(Room room)
+    {
+        const string sql = @"INSERT INTO Room (RoomCode, FloorId, RoomTypeId, Status, Note, IsActive)
+                    VALUES ($roomCode, $floorId, $roomTypeId, $status, $note, $isActive);";
+        using var connection = _connectionFactory.CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        command.Parameters.AddWithValue("$roomCode", room.RoomCode);
+        command.Parameters.AddWithValue("$floorId", room.FloorId);
+        command.Parameters.AddWithValue("$roomTypeId", room.RoomTypeId);
+        command.Parameters.AddWithValue("$status", room.Status.ToString());
+        command.Parameters.AddWithValue("$note", (object?)room.Note ?? DBNull.Value);
+        command.Parameters.AddWithValue("$isActive", room.IsActive ? 1 :0);
+        command.ExecuteNonQuery();
+        // trả về id phòng mới thêm
+        using var idCommand = connection.CreateCommand();
+        idCommand.CommandText = "SELECT last_insert_rowid();";
+        return Convert.ToInt32(idCommand.ExecuteScalar());
+
+    }
+    // cập nhật, sửa phòng mà không thay đổi trạng thái
+    public void UpdateRoom(Room room)
+    {
+        const string sql = @" UPDATE Room
+                        SET RoomCode = $roomCode,
+                            FloorId = $floorId,
+                            RoomTypeId = $roomTypeId,
+                            Note = $note,
+                            IsActive = $isActive WHERE RoomId = $roomId;";
+        using var connection = _connectionFactory.CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        command.Parameters.AddWithValue("$roomCode", room.RoomCode);
+        command.Parameters.AddWithValue("$floorId", room.FloorId);
+        command.Parameters.AddWithValue("$roomTypeId", room.RoomTypeId);
+        command.Parameters.AddWithValue("$note", (object?)room.Note ?? DBNull.Value);
+        command.Parameters.AddWithValue("$isActive", room.IsActive ? 1 :0);
+        command.Parameters.AddWithValue("$roomId", room.RoomId);
+
+        if (command.ExecuteNonQuery() != 1)
+            throw new InvalidOperationException("Lỗi cập nhật phòng, vui lòng thử lại sau!");
+    }
 }

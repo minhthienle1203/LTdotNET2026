@@ -5,6 +5,7 @@ using HotelManagement.Infrastructure.Data;
 using HotelManagement.WinForms.Forms.Customers;
 using HotelManagement.Infrastructure.Data.Repositories;
 using HotelManagement.WinForms.Forms.Dashboard;
+using HotelManagement.WinForms.Forms.Housekeeping;
 using HotelManagement.WinForms.Forms.Invoices;
 using HotelManagement.WinForms.Forms.Main;
 using HotelManagement.WinForms.Forms.Rooms;
@@ -58,7 +59,7 @@ internal static class Program
                     context)
             );
             mainForm.RegisterPage("S05", context => new RoomListView(roomService, floorService, mainForm.NavigateToScreen, context));
-            mainForm.RegisterPage("S06", context=> new RoomFormView( roomService, floorService ,mainForm.NavigateToScreen));
+            mainForm.RegisterPage("S06", context=> new RoomFormView( roomService, floorService ,mainForm.NavigateToScreen, context));
             mainForm.RegisterPage(
                 "S07",
                 _ => new CustomersListView(mainForm.NavigateToScreen)
@@ -88,6 +89,8 @@ internal static class Program
                 "S17",
                 _ => new InvoiceListView(mainForm.NavigateToScreen)
             );
+            //đăng kí trang quản lí dọn phòng
+            mainForm.RegisterPage("S19", _=> new HousekeepingView(roomService, mainForm.NavigateToScreen));
 
             Application.Run(mainForm);
         }
