@@ -78,6 +78,10 @@ internal static class Program
                 "S09",
                 ctx => new ReservationListView(mainForm.NavigateToScreen, ctx)
             );
+            mainForm.RegisterPage(
+                "S10",
+                ctx => new ReservationFormView(mainForm.NavigateToScreen, ctx)
+            );
 
 
             // Đăng kí trang S13
