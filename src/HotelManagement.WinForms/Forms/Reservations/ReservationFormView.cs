@@ -314,9 +314,134 @@ public sealed class ReservationFormView : UserControl
         var index = roomBox.Items.Cast<RoomOption>().ToList().FindIndex(x => x.Code == keepCode);
         roomBox.SelectedIndex = keepCode != null && index >= 0 ? index : 0;
     }
+     private void RefreshRooms()
+    {
+        if (loading) return;
+        FillRooms((roomBox.SelectedItem as RoomOption)?.Code);
+        UpdateAll();
+    }
+
+    private void CheckAvailability()
+    {
+        if (roomTypeBox.SelectedItem is not RoomTypeOption type)
+        {
+            availabilityLabel.Text = "Chưa chọn loại phòng.";
+            return;
+        }
+
+        var free = FreeRooms(type).Count();
+        availabilityLabel.Text = free > 0
+            ? $"Còn {free}/{type.Rooms.Length} phòng trống trong khoảng thời gian đã chọn."
+            : "Đã hết phòng trong khoảng thời gian đã chọn.";
+    }
+    private void UpdateAll()
+    {
+        if (loading) return;
+
+        var customer = customerBox.SelectedItem as CustomerOption;
+        var type = roomTypeBox.SelectedItem as RoomTypeOption;
+        var room = roomBox.SelectedItem as RoomOption;
+        var span = checkOutPicker.Value - checkInPicker.Value;
+        var hours = span.TotalHours > 0 ? Math.Max(1, (int)Math.Ceiling(span.TotalHours)) : 0;
+        var days = hours > 0 ? Math.Max(1, (int)Math.Ceiling(hours / 24.0)) : 0;
+
+        customerDetailLabel.Text = customer == null
+            ? "Chưa chọn khách hàng."
+            : $"{customer.IdentityText}   SĐT: {customer.Phone}   Email: {customer.Email}";
+
+        durationLabel.Text = hours > 0
+            ? $"Thời lượng dự kiến: {hours} giờ (tương đương {days} ngày)"
+            : "Thời gian không hợp lệ: giờ trả phải sau giờ nhận.";
+
+        summaryLabel.Text =
+            $"Khách đại diện: {customer?.FullName ?? "(chưa chọn)"}\n\n" +
+            $"Nhận phòng: {checkInPicker.Value:dd/MM/yyyy HH:mm}\n" +
+            $"Trả phòng: {checkOutPicker.Value:dd/MM/yyyy HH:mm}\n" +
+            $"Thời gian: {hours} giờ ({days} ngày)\n\n" +
+            $"Loại phòng: {type?.Name ?? "(chưa chọn)"}\n" +
+            $"Phòng cụ thể: {(room?.Code == null ? "(không gán)" : room.Text)}\n\n" +
+            $"Tiền phòng dự kiến nếu tính theo giờ: {(type == null ? 0 : hours * type.HourlyRate):N0} đ\n" +
+            $"Tiền phòng dự kiến nếu tính theo ngày: {(type == null ? 0 : days * type.DailyRate):N0} đ\n" +
+            "(Cách tính được chọn khi checkout)\n\n" +
+            $"Tiền cọc đã nhận: {depositBox.Value:N0} đ\n\n" +
+            "Trạng thái khi lưu: Đã xác nhận Confirmed";
+    }
+
+    private bool ValidateForm()
+    {
+        errorProvider.Clear();
+
+        var type = roomTypeBox.SelectedItem as RoomTypeOption;
+        var valid = true;
+        valid &= Check(customerBox.SelectedItem is CustomerOption, customerBox, "Vui lòng chọn khách hàng.");
+        valid &= Check(checkOutPicker.Value > checkInPicker.Value, checkOutPicker, "Giờ trả phòng phải sau giờ nhận phòng.");
+        valid &= Check(type != null && FreeRooms(type).Any(), roomTypeBox, "Chưa chọn loại phòng hoặc đã hết phòng.");
+        return valid;
+    }
+
+    private bool Check(bool condition, Control control, string message)
+    {
+        if (!condition) errorProvider.SetError(control, message);
+        return condition;
+    }
+
+    private void SaveReservation()
+    {
+        if (!ValidateForm()) return;
+
+        MessageBox.Show(this, "Đã lưu đặt phòng .", "Thông báo",
+            MessageBoxButtons.OK, MessageBoxIcon.Information);
+        navigate("S09", null);
+    }
 
 
+    private sealed record CustomerOption(int Id, string FullName, string IdentityText, string Phone, string Email)
+    {
+        public string Text => $"{FullName} - {Phone}";
+    }
 
+    private sealed record RoomInfo(string Code, RoomStatus Status);
+
+    private sealed record RoomTypeOption(string Name, int MaxOccupancy, decimal HourlyRate, decimal DailyRate, RoomInfo[] Rooms)
+    {
+        public string Text => $"{Name} - {HourlyRate:N0} đ/giờ | {DailyRate:N0} đ/ngày (tối đa {MaxOccupancy} khách)";
+    }
+
+    private sealed record RoomOption(string? Code, RoomStatus? Status)
+    {
+        public string Text => Code == null ? "(test)" : $"Phòng {Code} ({Status})";
+    }
+
+    private sealed record SampleReservation(
+        int Id, string Code, int CustomerIndex, int TypeIndex, string? RoomCode,
+        DateTime CheckIn, DateTime CheckOut, decimal Deposit, string Note);
+    private static readonly CustomerOption[] Customers =
+    {
+        new(1, "Nguyễn Hoàng", "CCCD 079200000001", "0901000001", "hoang.ng@gmail.com"),
+        new(2, "Trần Quốc Bảo", "CCCD 079200000002", "0901000002", "(không có)"),
+        new(3, "Lê Thu Hà", "Passport B12345678", "0901000003", "(không có)")
+    };
+
+    private static readonly RoomTypeOption[] RoomTypes =
+    {
+        new("Standard", 2, 100000, 500000, new RoomInfo[]
+        {
+            new("101", RoomStatus.Available), new("102", RoomStatus.Occupied), new("201", RoomStatus.Available),
+            new("202", RoomStatus.Occupied), new("301", RoomStatus.Occupied), new("302", RoomStatus.Cleaning)
+        }),
+        new("Deluxe", 3, 150000, 750000, new RoomInfo[]
+        {
+            new("103", RoomStatus.Reserved), new("104", RoomStatus.Cleaning), new("203", RoomStatus.Reserved),
+            new("204", RoomStatus.Available), new("303", RoomStatus.Reserved), new("304", RoomStatus.Available)
+        })
+    };
+
+    private static readonly SampleReservation[] SampleReservations =
+    {
+        new(1, "RSV-202611-001", 0, 1, "103", new DateTime(2026, 11, 16, 14, 0, 0), new DateTime(2026, 11, 17, 12, 0, 0), 100000, "Đặt trước phòng 103"),
+        new(2, "RSV-202611-002", 1, 1, "203", new DateTime(2026, 11, 18, 14, 0, 0), new DateTime(2026, 11, 19, 12, 0, 0), 150000, "Đặt trước phòng 203"),
+        new(3, "RSV-202611-003", 2, 1, "303", new DateTime(2026, 11, 20, 14, 0, 0), new DateTime(2026, 11, 21, 12, 0, 0), 100000, "Đặt trước phòng 303")
+    };
 }
 
 
