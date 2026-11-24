@@ -104,4 +104,14 @@ public sealed partial class RoomService
         room.Status = current.Status;
         _repository.UpdateRoom(room);
     }
+    //gọi danh sách phòng đang dọn
+    public IReadOnlyList<RoomListDto> GetRoomsForCleaning()
+    {
+        return _repository.GetRoomsForCleaning();
+    }
+    //đổi trạng thái thành đã dọn
+    public void CompleteCleaning(int roomId)
+    {
+        _repository.CompleteCleaning(roomId);
+    }
 }

@@ -22,5 +22,8 @@ public partial interface IRoomRepository
     int InsertRoom(Room room);
     // cap nhat. chinh sua phong
     void UpdateRoom(Room room);
-
+    // lay danh sach phong dang don dep
+    List<RoomListDto> GetRoomsForCleaning();
+    // chinh sua trang thai da don dep xong
+    void CompleteCleaning(int roomId);
 }
