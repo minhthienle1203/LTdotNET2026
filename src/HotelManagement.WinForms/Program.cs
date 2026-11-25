@@ -82,15 +82,20 @@ internal static class Program
                         isNew ? customerService.GetSuggestedCode() : null);
                 }
             );
+            var reservationService = new ReservationService(
+                new ReservationRepository(connectionFactory));
+
+
 
             mainForm.RegisterPage(
                 "S09",
-                ctx => new ReservationListView(mainForm.NavigateToScreen, ctx)
+                ctx => new ReservationListView(mainForm.NavigateToScreen, reservationService, ctx)
             );
             mainForm.RegisterPage(
                 "S10",
-                ctx => new ReservationFormView(mainForm.NavigateToScreen, ctx)
+                ctx => new ReservationFormView(mainForm.NavigateToScreen, reservationService, ctx)
             );
+
 
 
             // Đăng kí trang S13

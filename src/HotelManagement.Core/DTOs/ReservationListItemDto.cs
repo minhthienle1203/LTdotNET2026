@@ -1,7 +1,7 @@
 ﻿using HotelManagement.Core.Enums;
+using HotelManagement.Core.Services;
 
 namespace HotelManagement.Core.DTOs;
-
 public class ReservationListItemDto
 {
     public int ReservationId { get; set; }
@@ -16,6 +16,14 @@ public class ReservationListItemDto
     public decimal DepositAmount { get; set; }
     public ReservationStatus Status { get; set; }
     public string? Note { get; set; }
+    public decimal HourlyRate { get; set; }
+    public decimal DailyRate { get; set; }
+
+
+    public int TotalHours => RoomPriceCalculator.CountHours(ExpectedCheckIn, ExpectedCheckOut);
+    public int TotalDays => RoomPriceCalculator.CountDays(ExpectedCheckIn, ExpectedCheckOut);
+    public decimal RoomAmountByHour => RoomPriceCalculator.ByHour(ExpectedCheckIn, ExpectedCheckOut, HourlyRate);
+    public decimal RoomAmountByDay => RoomPriceCalculator.ByDay(ExpectedCheckIn, ExpectedCheckOut, DailyRate);
 
     public string RoomText => RoomCode ?? "(Chưa gán - giữ theo loại)";
 
