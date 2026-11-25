@@ -61,19 +61,28 @@ internal static class Program
             );
             mainForm.RegisterPage("S05", context => new RoomListView(roomService, floorService, mainForm.NavigateToScreen, context));
             mainForm.RegisterPage("S06", context=> new RoomFormView( roomService, floorService ,mainForm.NavigateToScreen, context));
-            mainForm.RegisterPage(
-                "S07",
-                _ => new CustomersListView(mainForm.NavigateToScreen)
-            );
+            var customerRepository = new CustomerRepository(connectionFactory);
+            var customerService = new CustomerService(customerRepository);
+            mainForm.RegisterPage("S07",
+                _ => new CustomersListView(mainForm.NavigateToScreen, customerService.SearchCustomers));
             mainForm.RegisterPage(
                 "S08",
-                param => param switch
+                param =>
                 {
-                    Customer c => new CustomerFormView(mainForm.NavigateToScreen, c),
-                    CustomerFormContext ctx => new CustomerFormView(mainForm.NavigateToScreen, null, ctx),
-                    _ => new CustomerFormView(mainForm.NavigateToScreen)
+                    Customer? customer = param as Customer;
+                    CustomerFormContext? ctx = param as CustomerFormContext;
+                    bool isNew = customer is null || customer.CustomerId == 0;
+
+                    return new CustomerFormView(
+                        mainForm.NavigateToScreen,
+                        customer,
+                        ctx,
+                        customerService.Save,
+                        id => customerService.IsIdentityDuplicate(id, isNew ? null : customer!.CustomerId),
+                        isNew ? customerService.GetSuggestedCode() : null);
                 }
             );
+
             mainForm.RegisterPage(
                 "S09",
                 ctx => new ReservationListView(mainForm.NavigateToScreen, ctx)
