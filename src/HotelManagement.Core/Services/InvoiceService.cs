@@ -14,4 +14,11 @@ public sealed class InvoiceService
     {
         return _repository.GetAll(includeReservations);
     }
+    public void MarkAsPrinted(int invoiceId, DateTime? printedAt = null)
+    {
+        if (invoiceId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(invoiceId));
+
+        _repository.MarkAsPrinted(invoiceId, printedAt ?? DateTime.Now);
+    }
 }

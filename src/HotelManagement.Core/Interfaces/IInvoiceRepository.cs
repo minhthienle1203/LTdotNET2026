@@ -5,4 +5,5 @@ namespace HotelManagement.Core.Interfaces;
 public interface IInvoiceRepository
 {
     IReadOnlyList<Invoice> GetAll(bool includeReservations = false);
+    void MarkAsPrinted(int invoiceId, DateTime printedAt);
 }

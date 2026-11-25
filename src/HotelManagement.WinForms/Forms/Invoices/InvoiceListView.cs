@@ -33,8 +33,6 @@ public sealed class InvoiceListView : UserControl
     };
 
     private InvoiceItem? selectedInvoice;
-    private readonly HashSet<int> printed = new();
-
     private static readonly string[] Stat =
     {
         "TỔNG HÓA ĐƠN",
@@ -73,8 +71,8 @@ public sealed class InvoiceListView : UserControl
         layout.Controls.Add(invoiceCount, 0, 3);
         layout.Controls.Add(BuildArea(), 0, 4);
         Controls.Add(layout);
-        Filter();
         LoadInvoices();
+        Filter();
         RefreshData();
     }
 
@@ -90,7 +88,7 @@ public sealed class InvoiceListView : UserControl
             RoomCode: $"#{inv.StayId}",
             TotalAmount: inv.AmountDue,
             IsPaid: inv.Status == InvoiceStatus.Paid,
-            IsPrinted: inv.PrintedAt.HasValue || printed.Contains(inv.InvoiceId),
+            IsPrinted: inv.PrintedAt.HasValue,
             ChargeBasic: inv.ChargeBasis == ChargeBasis.Day ? "Theo ngày" : "Theo giờ",
             ChargedUnits: inv.ChargedUnits,
             AppliedRate: inv.AppliedRate,
@@ -185,7 +183,7 @@ public sealed class InvoiceListView : UserControl
                 MessageBox.Show("Vui lòng chọn một hóa đơn trước");
                 return;
             }
-            printed.Add(selectedInvoice.InvoiceId);
+            _invoiceService.MarkAsPrinted(selectedInvoice.InvoiceId, DateTime.Now);
             LoadInvoices();
             RefreshData();
             SelectInvoice(invoices.FirstOrDefault(x => x.InvoiceId == selectedInvoice.InvoiceId));
@@ -193,7 +191,6 @@ public sealed class InvoiceListView : UserControl
         };
         actionRow.Controls.Add(btnPrintInvoice);
         detailsPanel.Controls.Add(actionRow, 0, 1);
-
         panel.Controls.Add(detailsPanel, 1, 0);
         return panel;
     }
