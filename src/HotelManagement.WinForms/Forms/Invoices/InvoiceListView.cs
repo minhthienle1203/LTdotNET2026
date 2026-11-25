@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using HotelManagement.Core.Entities;
+using HotelManagement.Core.Enums;
+using HotelManagement.Core.Services;
 
 namespace HotelManagement.WinForms.Forms.Invoices;
 
@@ -11,7 +14,10 @@ namespace HotelManagement.WinForms.Forms.Invoices;
 public sealed class InvoiceListView : UserControl
 {
     private readonly Action<string, object?> navigate;
-    private readonly List<InvoiceItem> invoices;
+    private List<InvoiceItem> invoices;
+
+    private readonly InvoiceService _invoiceService;
+
     // Các thành phần giao diện
     private readonly TextBox SearchBox = new();
     private readonly ComboBox StatusBox = new();
@@ -19,8 +25,16 @@ public sealed class InvoiceListView : UserControl
     private readonly TableLayoutPanel ThongKePanel = new();
     private readonly Label invoiceCount = new();
     private readonly Label invoiceDetails = new();
-    private readonly Button btnPrintInvoice = new() { Text = "IN HÓA ĐƠN", AutoSize = true, Width = 75, Height = 40, Font = new Font("Segoe UI", 8, FontStyle.Bold), Visible = false };
+
+    private readonly Button btnPrintInvoice = new()
+    {
+        Text = "IN HÓA ĐƠN", AutoSize = true, Width = 75, Height = 40, Font = new Font("Segoe UI", 8, FontStyle.Bold),
+        Visible = false
+    };
+
     private InvoiceItem? selectedInvoice;
+    private readonly HashSet<int> printed = new();
+
     private static readonly string[] Stat =
     {
         "TỔNG HÓA ĐƠN",
@@ -30,10 +44,11 @@ public sealed class InvoiceListView : UserControl
         "CHƯA IN"
 
     };
-    public InvoiceListView(Action<string, object?> navigate)
+
+    public InvoiceListView(Action<string, object?> navigate, InvoiceService invoiceService)
     {
         this.navigate = navigate ?? throw new ArgumentNullException(nameof(navigate));
-        invoices = LoadInvoices();
+        _invoiceService = invoiceService ?? throw new ArgumentNullException(nameof(invoiceService));
         Dock = DockStyle.Fill;
         Padding = new Padding(12);
         AutoScroll = true;
@@ -59,8 +74,36 @@ public sealed class InvoiceListView : UserControl
         layout.Controls.Add(BuildArea(), 0, 4);
         Controls.Add(layout);
         Filter();
+        LoadInvoices();
         RefreshData();
     }
+
+    private void LoadInvoices()
+    {
+        IReadOnlyList<Invoice> entities = _invoiceService.GetAll();
+        invoices = entities.Select(inv => new InvoiceItem(
+            InvoiceId: inv.InvoiceId,
+            InvoiceCode: inv.InvoiceCode,
+            StayId: inv.StayId,
+            IssuedDate: inv.CreatedAt,
+            CustomerName: $"Stay #{inv.StayId}",
+            RoomCode: $"#{inv.StayId}",
+            TotalAmount: inv.AmountDue,
+            IsPaid: inv.Status == InvoiceStatus.Paid,
+            IsPrinted: inv.PrintedAt.HasValue || printed.Contains(inv.InvoiceId),
+            ChargeBasic: inv.ChargeBasis == ChargeBasis.Day ? "Theo ngày" : "Theo giờ",
+            ChargedUnits: inv.ChargedUnits,
+            AppliedRate: inv.AppliedRate,
+            RoomCharge: inv.RoomCharge,
+            ServiceCharge: inv.ServiceCharge,
+            SubTotal: inv.SubTotal,
+            DepositDeducted: inv.DepositDeducted,
+            AmountDue: inv.AmountDue,
+            RefundDue: inv.RefundDue,
+            PrintedAt: inv.PrintedAt
+        )).ToList();
+    }
+
     private Control BuildHeader()
     {
         var panel = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
@@ -72,6 +115,7 @@ public sealed class InvoiceListView : UserControl
         });
         return panel;
     }
+
     // Các ô thống kê
     private Control BuildThongKe()
     {
@@ -91,8 +135,10 @@ public sealed class InvoiceListView : UserControl
             };
             ThongKePanel.Controls.Add(item, i, 0);
         }
+
         return ThongKePanel;
     }
+
     private Control BuildFilters()
     {
         var panel = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
@@ -105,6 +151,7 @@ public sealed class InvoiceListView : UserControl
         panel.Controls.Add(StatusBox);
         return panel;
     }
+
     private Control BuildArea()
     {
         var panel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1 };
@@ -121,7 +168,8 @@ public sealed class InvoiceListView : UserControl
         panel.Controls.Add(invoiceGrid, 0, 0);
 
         // Phần thông tin
-        var detailsPanel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Padding = new Padding(8) };
+        var detailsPanel = new TableLayoutPanel
+            { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Padding = new Padding(8) };
         detailsPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 75));
         detailsPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
         invoiceDetails.Dock = DockStyle.Fill;
@@ -137,7 +185,11 @@ public sealed class InvoiceListView : UserControl
                 MessageBox.Show("Vui lòng chọn một hóa đơn trước");
                 return;
             }
-            MessageBox.Show($"Đang in hóa đơn {selectedInvoice.InvoiceCode}");
+            printed.Add(selectedInvoice.InvoiceId);
+            LoadInvoices();
+            RefreshData();
+            SelectInvoice(invoices.FirstOrDefault(x => x.InvoiceId == selectedInvoice.InvoiceId));
+            MessageBox.Show($"Đã in hóa đơn {selectedInvoice.InvoiceCode}");
         };
         actionRow.Controls.Add(btnPrintInvoice);
         detailsPanel.Controls.Add(actionRow, 0, 1);
@@ -145,6 +197,7 @@ public sealed class InvoiceListView : UserControl
         panel.Controls.Add(detailsPanel, 1, 0);
         return panel;
     }
+
     private void Filter()
     {
         StatusBox.Items.Add("Tất cả trạng thái");
@@ -156,14 +209,21 @@ public sealed class InvoiceListView : UserControl
         invoiceGrid.ColumnHeadersDefaultCellStyle.Font =
             new Font(invoiceGrid.Font, FontStyle.Bold);
         invoiceGrid.AutoGenerateColumns = false;
-        invoiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "InvoiceCode", HeaderText = "Mã Hóa Đơn" });
-        invoiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "IssuedDateText", HeaderText = "Ngày Lập" });
-        invoiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "CustomerName", HeaderText = "Khách Hàng" });
+        invoiceGrid.Columns.Add(new DataGridViewTextBoxColumn
+            { DataPropertyName = "InvoiceCode", HeaderText = "Mã Hóa Đơn" });
+        invoiceGrid.Columns.Add(new DataGridViewTextBoxColumn
+            { DataPropertyName = "IssuedDateText", HeaderText = "Ngày Lập" });
+        invoiceGrid.Columns.Add(new DataGridViewTextBoxColumn
+            { DataPropertyName = "CustomerName", HeaderText = "Lượt Lưu Trú" });
         invoiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "RoomCode", HeaderText = "Phòng" });
-        invoiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "TotalAmountDisplay", HeaderText = "Tổng Tiền" });
-        invoiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "PrintStatusText", HeaderText = "Trạng Thái In" });
-        invoiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "PaymentStatusText", HeaderText = "Thanh Toán" });
-        }
+        invoiceGrid.Columns.Add(new DataGridViewTextBoxColumn
+            { DataPropertyName = "TotalAmountDisplay", HeaderText = "Tổng Tiền" });
+        invoiceGrid.Columns.Add(new DataGridViewTextBoxColumn
+            { DataPropertyName = "PrintStatusText", HeaderText = "Trạng Thái In" });
+        invoiceGrid.Columns.Add(new DataGridViewTextBoxColumn
+            { DataPropertyName = "PaymentStatusText", HeaderText = "Thanh Toán" });
+    }
+
     private void RefreshData()
     {
         var keyword = SearchBox.Text.Trim().ToLower();
@@ -174,12 +234,14 @@ public sealed class InvoiceListView : UserControl
              inv.InvoiceCode.ToLower().Contains(keyword) ||
              inv.CustomerName.ToLower().Contains(keyword) ||
              inv.RoomCode.ToLower().Contains(keyword)) &&
-            (printFilter == "Tất cả trạng thái" || inv.PrintStatusText == printFilter || inv.PaymentStatusText == paidFilter)
+            (printFilter == "Tất cả trạng thái" || inv.PrintStatusText == printFilter ||
+             inv.PaymentStatusText == paidFilter)
         ).ToList();
         invoiceGrid.DataSource = filtered;
         invoiceCount.Text = $"Danh sách hóa đơn đã in({filtered.Count}/{invoices.Count})";
         UpdateThongKe();
     }
+
     private void UpdateThongKe()
     {
         var counts = new[]
@@ -198,6 +260,7 @@ public sealed class InvoiceListView : UserControl
                 lbl.Text = $"{Stat[i]}\n{counts[i]}";
         }
     }
+
     //Hàm kiểm tra lựa chọn
     private void InvoiceSelected()
     {
@@ -210,6 +273,7 @@ public sealed class InvoiceListView : UserControl
             SelectInvoice(null);
         }
     }
+
     private void SelectInvoice(InvoiceItem? invoice)
     {
         selectedInvoice = invoice;
@@ -219,33 +283,46 @@ public sealed class InvoiceListView : UserControl
             invoiceDetails.Text = "Chọn một hóa đơn từ danh sách để xem chi tiết.";
             return;
         }
+
         btnPrintInvoice.Visible = !invoice.IsPrinted;
         invoiceDetails.Text =
             $"[ THÔNG TIN CHI TIẾT ]\n\n" +
             $"Mã hóa đơn: {invoice.InvoiceCode}\n" +
+            $"Lượt lưu trú (StayId): #{invoice.StayId}\n" +
             $"Ngày lập: {invoice.IssuedDateText}\n" +
-            $"Khách hàng: {invoice.CustomerName}\n" +
-            $"Phòng: {invoice.RoomCode}\n" +
-            $"Tổng tiền: {invoice.TotalAmountDisplay}\n" +
             $"Thanh toán: {invoice.PaymentStatusText}\n" +
-            $"Trạng thái in: {invoice.PrintStatusText}";
+            $"Trạng thái in: {invoice.PrintStatusText}\n" +
+            $"Thời điểm in: {(invoice.PrintedAt.HasValue ? invoice.PrintedAt.Value.ToString("dd/MM/yyyy HH:mm") : "Chưa in")}\n\n" +
+            $"[ CHI TIẾT TIỀN ]\n" +
+            $"Tiền phòng: {invoice.RoomCharge:N0} đ\n" +
+            $"Tiền dịch vụ: {invoice.ServiceCharge:N0} đ\n" +
+            $"Tạm tính: {invoice.SubTotal:N0} đ\n" +
+            $"Tiền cọc trừ: {invoice.DepositDeducted:N0} đ\n" +
+            $"Khách cần trả: {invoice.AmountDue:N0} đ\n" +
+            $"Tiền hoàn lại: {invoice.RefundDue:N0} đ";
     }
-    private List<InvoiceItem> LoadInvoices() => new()
-    {
-        new(1, "HD001", new DateTime(2026, 11, 20), "Nguyễn Văn An", "P101", 1250000m, true, true),
-        new(2, "HD002", new DateTime(2026, 11, 20), "Trần Thị Bình", "P203", 850000m, false, false),
-        new(3, "HD003", new DateTime(2026, 11, 21), "Lê Hoàng Cường", "P305", 2400000m, true, false),
-        new(4, "HD004", new DateTime(2026, 11, 21), "Phạm Minh Dung", "P102", 520000m, false, true)
-    };
+
+
     private sealed record InvoiceItem(
         int InvoiceId,
         string InvoiceCode,
+        int StayId,
         DateTime IssuedDate,
         string CustomerName,
         string RoomCode,
         decimal TotalAmount,
         bool IsPaid,
-        bool IsPrinted)
+        bool IsPrinted,
+        string ChargeBasic,
+        int ChargedUnits,
+        decimal AppliedRate,
+        decimal RoomCharge,
+        decimal ServiceCharge,
+        decimal SubTotal,
+        decimal DepositDeducted,
+        decimal AmountDue,
+        decimal RefundDue,
+        DateTime? PrintedAt)
     {
         public string IssuedDateText => IssuedDate.ToString("dd/MM/yyyy");
         public string PaymentStatusText => IsPaid ? "Đã thanh toán" : "Chưa thanh toán";
@@ -253,3 +330,4 @@ public sealed class InvoiceListView : UserControl
         public string TotalAmountDisplay => TotalAmount.ToString("N0") + "đ";
     }
 }
+
