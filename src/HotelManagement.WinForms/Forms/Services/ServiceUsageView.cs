@@ -166,6 +166,8 @@ public sealed class ServiceUsageView : UserControl
         ServiceBox.SelectedIndexChanged += (_, _) => RefreshData();
         StatusBox.SelectedIndexChanged += (_, _) => RefreshData();
         // Các cột
+        serviceGrid.ColumnHeadersDefaultCellStyle.Font =
+            new Font(serviceGrid.Font, FontStyle.Bold);
         serviceGrid.AutoGenerateColumns = false;
         serviceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "ServiceCode", HeaderText = "Mã Dịch Vụ" });
         serviceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "ServiceName", HeaderText = "Tên Dịch Vụ" });

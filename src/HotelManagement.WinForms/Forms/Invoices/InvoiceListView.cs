@@ -153,6 +153,8 @@ public sealed class InvoiceListView : UserControl
         StatusBox.SelectedIndexChanged += (_, _) => RefreshData();
 
         // Các cột hóa đơn: mã hóa đơn, ngày lập, khách hàng, phòng, tổng tiền, trạng thái
+        invoiceGrid.ColumnHeadersDefaultCellStyle.Font =
+            new Font(invoiceGrid.Font, FontStyle.Bold);
         invoiceGrid.AutoGenerateColumns = false;
         invoiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "InvoiceCode", HeaderText = "Mã Hóa Đơn" });
         invoiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "IssuedDateText", HeaderText = "Ngày Lập" });
