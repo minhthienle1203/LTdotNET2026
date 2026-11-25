@@ -2,7 +2,7 @@
 
 > **Tên dự án tạm dùng:** `HotelManagement`  
 > **Loại ứng dụng:** Windows Forms Desktop Application  
-> **Mục tiêu:** Dữ liệu được lưu trong file SQLite trên máy đang chạy ứng dụng. Ứng dụng không cần Internet, không gọi API, không đồng bộ với máy chủ bên ngoài và không yêu cầu cài đặt Database Server.
+> **Mục tiêu:** Ứng dụng quản lý nội bộ khách sạn, chạy offline trên một máy Windows, lưu dữ liệu trong SQL Server cục bộ.  
 > **Quy mô giao diện:** 20 màn hình nghiệp vụ có thể điều hướng độc lập; không tính `MainForm` khung chứa, hộp thoại xác nhận hoặc thông báo nhỏ.
 
 ## 1. Tổng quan dự án
@@ -20,7 +20,7 @@ Hệ thống hỗ trợ nhân viên/lễ tân quản lý danh sách phòng, theo
 - Lưu xuyên suốt thông tin khách, đặt phòng, lượt lưu trú, dịch vụ phát sinh và hóa đơn.
 - Tự động tính tiền phòng, tiền dịch vụ, tiền cọc đã nhận và số tiền còn phải thu.
 - Có số liệu báo cáo theo tháng để đánh giá công suất và doanh thu.
-- Áp dụng nội dung đã học: C#, OOP, WinForms, Event-driven, Validation, Exception Handling, File I/O ở mức cần thiết và ADO.NET với SQLite.
+- Áp dụng nội dung đã học: C#, OOP, WinForms, Event-driven, Validation, Exception Handling, File I/O ở mức cần thiết và ADO.NET/SqlClient.
 
 ### 1.3. Người dùng và vai trò
 
@@ -57,7 +57,7 @@ Hệ thống hỗ trợ nhân viên/lễ tân quản lý danh sách phòng, theo
 - Phân quyền chi tiết theo chức vụ, chấm công hoặc quản lý tài khoản nhân viên.
 - In thực tế qua máy in ở phiên bản yêu cầu hiện tại. Nút **In hóa đơn** chỉ mô phỏng thao tác và hiển thị thông báo hoàn thành; dữ liệu hóa đơn vẫn lưu trong CSDL.
 
-> Ứng dụng không kết nối mạng trong lúc sử dụng. SQLite lưu dữ liệu trực tiếp trong một file trên máy Windows; người dùng cuối không cần cài SQL Server, MySQL hoặc một Database Server khác.
+> Ứng dụng không kết nối mạng trong lúc sử dụng. Máy vẫn cần có SQL Server Express LocalDB (hoặc SQL Server Express cài trên chính máy đó) để lưu dữ liệu cục bộ.
 
 ---
 
@@ -66,123 +66,71 @@ Hệ thống hỗ trợ nhân viên/lễ tân quản lý danh sách phòng, theo
 | Thành phần | Công nghệ / phiên bản | Ghi chú |
 |---|---|---|
 | Ngôn ngữ | C# | Dùng OOP, class, properties, enum, nullable reference types. |
-| Nền tảng | **.NET 10** | Cách gọi chính xác là .NET 10. |
-| Target Framework | `net10.0-windows` | WinForms chỉ chạy trên Windows. Các project Core và Infrastructure dùng `net10.0`. |
-| SDK | `dotnet-sdk-10.0.401` | Theo môi trường đã chọn trong `global.json`. |
+| Nền tảng | **.NET 10** | Cách gọi chính xác là .NET 10 |
+| Target Framework | `net10.0-windows` | WinForms là công nghệ giao diện chỉ dành cho Windows. |
+| SDK | `dotnet-sdk-10.0.401` | Theo môi trường đã chọn. |
 | IDE | JetBrains Rider 2026.2.2 | Dùng tạo, thiết kế, build, debug WinForms. |
 | Giao diện | Windows Forms | Lập trình hướng sự kiện; dùng Form, UserControl, DataGridView, BindingSource, ErrorProvider, MessageBox. |
-| Hệ quản trị CSDL | **SQLite** | CSDL nhúng, lưu trong file `HotelManagementDb.sqlite` trên máy cục bộ; không cần Database Server. |
-| Công cụ quản trị CSDL | Navicat Premium Lite 18 hoặc công cụ hỗ trợ SQLite | Dùng mở file SQLite, xem bảng, quan hệ, dữ liệu và chạy truy vấn kiểm tra. Công cụ quản trị không phải Database Engine. |
-| Truy cập CSDL | **ADO.NET – `Microsoft.Data.Sqlite` 10.0.15** | Dùng `SqliteConnection`, `SqliteCommand`, `SqliteParameter`, `SqliteDataReader` và `SqliteTransaction`. Package chỉ đặt trong project `HotelManagement.Infrastructure`. |
-| Mô hình dữ liệu (Entity) | C# POCO Entity | Các class trong `HotelManagement.Core/Entities`; không phụ thuộc WinForms và không chứa câu SQL. Repository ánh xạ dữ liệu SQLite sang Entity/DTO. |
-| Tầng truy cập dữ liệu | Repository / DataAccess | Tập trung SQL, ánh xạ dữ liệu và quản lý transaction. Form không truy vấn SQLite trực tiếp. |
-| Khởi tạo CSDL | `DbInitializer` + SQL Embedded Resources | Khi mở ứng dụng lần đầu, chương trình tạo file SQLite, cấu trúc bảng, index và dữ liệu mẫu nếu chưa có. |
-| Quản lý mã nguồn | Git + SmartGit Education | Dùng branch riêng theo chức năng, commit có nội dung rõ ràng. Không commit file Database runtime. |
+| CSDL | Microsoft SQL Server Express LocalDB | |
+| Truy cập CSDL | ADO.NET – `Microsoft.Data.SqlClient` | Dùng `SqlConnection`, `SqlCommand`, `SqlParameter`, `SqlDataReader`, `SqlTransaction`. |
+| Quản lý mã nguồn | Git + SmartGit Education | Dùng branch riêng theo chức năng, commit có nội dung rõ ràng. |
 | Cài đặt | `dotnet publish` + Inno Setup (đề xuất) | Tạo bản publish Release và đóng gói thành file cài đặt `.exe`. |
 
 ### 3.1. Cấu hình dự án WinForms
 
-Tệp `.csproj` cần có cấu hình tương đương `HotelManagement.WinForms.csproj`:
-
-```xml
-<Project Sdk="Microsoft.NET.Sdk">
-    <PropertyGroup>
-        <OutputType>WinExe</OutputType>
-        <TargetFramework>net10.0-windows</TargetFramework>
-        <UseWindowsForms>true</UseWindowsForms>
-        <Nullable>enable</Nullable>
-        <ImplicitUsings>enable</ImplicitUsings>
-    </PropertyGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\HotelManagement.Core\HotelManagement.Core.csproj" />
-        <ProjectReference Include="..\HotelManagement.Infrastructure\HotelManagement.Infrastructure.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
-    </ItemGroup>
-</Project>
-```
-**`HotelManagement.Infrastructure.csproj`:**
+Tệp `.csproj` cần có cấu hình tương đương:
 
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\HotelManagement.Core\HotelManagement.Core.csproj" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.15" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.1" />
   </ItemGroup>
 </Project>
 ```
-Các file SQL trong thư mục `database/` được khai báo `EmbeddedResource` trong `HotelManagement.Infrastructure.csproj` với logical name thống nhất để `DbInitializer` đọc được. Không khai báo trùng một file SQL vừa là `EmbeddedResource` vừa là `Content` nếu không có chủ đích.
 
-Không tự chép cứng một phiên bản NuGet khác nhau ở từng máy. Thành viên thay đổi package phải commit `.csproj` và cập nhật lock file nếu nhóm bật chế độ khóa phiên bản.
+Không tự chép cứng một phiên bản NuGet khác nhau ở từng máy. Một thành viên thêm/cập nhật package thì commit cả `.csproj` và `packages.lock.json` nếu nhóm bật chế độ khóa phiên bản.
 
 ### 3.2. Lựa chọn cách truy cập dữ liệu
 
-Đồ án thống nhất sử dụng **ADO.NET trực tiếp qua `Microsoft.Data.Sqlite` kết hợp POCO Entity**. `Microsoft.Data.Sqlite` là ADO.NET provider cho SQLite và có thể sử dụng độc lập, không yêu cầu Entity Framework Core. Phiên bản hiện tại không sử dụng EF Core.
+Đồ án thống nhất sử dụng **ADO.NET trực tiếp qua `Microsoft.Data.SqlClient`** để phù hợp yêu cầu SQL Client và nội dung đã học. Không trộn ADO.NET và Entity Framework Core trong cùng một nghiệp vụ ở phiên bản đầu.
 
 | Thành phần | Vai trò |
 |---|---|
-| `SqliteConnection` | Mở kết nối đến file SQLite. |
-| `SqliteCommand` | Thực thi SELECT/INSERT/UPDATE/DELETE. |
-| `SqliteParameter` | Truyền giá trị đầu vào an toàn; không nối chuỗi dữ liệu người dùng vào SQL. |
-| `SqliteDataReader` | Đọc dữ liệu tuần tự từ kết quả truy vấn. |
-| `SqliteTransaction` | Đảm bảo các bước cập nhật nhiều bảng trong cùng nghiệp vụ được thực hiện đồng bộ. |
-| `DataTable` / `BindingSource` | Hỗ trợ đưa dữ liệu lên DataGridView và lọc/hiển thị trên WinForms khi phù hợp. |
+| `SqlConnection` | Mở kết nối đến SQL Server cục bộ. |
+| `SqlCommand` | Thực thi SELECT/INSERT/UPDATE/DELETE hoặc Stored Procedure. |
+| `SqlParameter` | Truyền giá trị đầu vào an toàn; không nối chuỗi dữ liệu người dùng vào SQL. |
+| `SqlDataReader` | Đọc dữ liệu tuần tự khi cần lấy danh sách/kết quả truy vấn. |
+| `SqlTransaction` | Đảm bảo các bước check-in/check-out liên quan được thực hiện đồng bộ. |
+| `DataTable` / `BindingSource` | Hỗ trợ đưa dữ liệu lên DataGridView và lọc/hiển thị trên WinForms. |
 
-Mọi thao tác CSDL phải đi qua `Repository` hoặc `DataAccess`, không viết SQL trực tiếp trong sự kiện `Button_Click` của Form. Entity là các lớp C# thuần (POCO). Repository ánh xạ dữ liệu đọc từ `SqliteDataReader`/`DataTable` sang Entity hoặc DTO. Không trộn ADO.NET với Entity Framework Core trong cùng một nghiệp vụ.
-```
+Mọi thao tác CSDL phải đi qua lớp `Repository` hoặc `DataAccess`, không viết SQL trực tiếp trong sự kiện `Button_Click` của Form. Entity vẫn là các lớp C# thuần (POCO); Repository tự ánh xạ dữ liệu đọc từ `SqlDataReader`/`DataTable` sang Entity hoặc DTO. Dù môn học có giới thiệu Entity Framework Core, phiên bản này không dùng EF Core song song để tránh hai cơ chế truy cập dữ liệu trong cùng đồ án. Nếu giảng viên yêu cầu EF Core, cần thống nhất thay lớp Repository trước khi triển khai, không trộn hai cách trong một nghiệp vụ.
 
 ### 3.3. Cấu hình kết nối cục bộ
 
-Ứng dụng sử dụng một file Database tại thư mục dữ liệu người dùng Windows, không đặt file đang ghi trong thư mục cài đặt hoặc thư mục source code.
+Chuỗi kết nối mẫu cho LocalDB:
 
-Đường dẫn đề xuất:
-
-`%LOCALAPPDATA%\HotelManagement\Data\HotelManagementDb.sqlite`
-
-Cấu hình `src/HotelManagement.WinForms/appsettings.json`:
-
-```json
-{
-  "ConnectionStrings": {
-    "HotelManagementDb": "Data Source=%LOCALAPPDATA%/HotelManagement/Data/HotelManagementDb.sqlite"
-  }
-}
+```text
+Server=(localdb)\MSSQLLocalDB;Database=HotelManagementDb;Integrated Security=True;TrustServerCertificate=True;
 ```
 
-`DbConnectionFactory` chịu trách nhiệm:
+- `Server`: instance LocalDB trên chính máy đang chạy chương trình.
+- `Database`: tên cơ sở dữ liệu của đồ án.
+- `Integrated Security=True`: dùng Windows Authentication, không lưu tài khoản/mật khẩu SQL trong mã nguồn.
+- `TrustServerCertificate=True`: chỉ dùng cho môi trường SQL Server cục bộ của đồ án khi cần xử lý chứng chỉ tự ký.
 
-- Đọc connection string được truyền vào từ cấu hình.
-- Mở rộng biến môi trường `%LOCALAPPDATA%` bằng `Environment.ExpandEnvironmentVariables()`.
-- Chuẩn hóa `Data Source` thành đường dẫn tuyệt đối.
-- Tạo thư mục chứa file Database nếu chưa tồn tại.
-- Dùng `SqliteConnectionStringBuilder` với `Mode = ReadWriteCreate` và `ForeignKeys = true`.
-- Tạo một `SqliteConnection` mới cho mỗi thao tác Repository; không giữ một connection mở xuyên suốt ứng dụng.
+Chuỗi kết nối đặt ở cấu hình riêng, chẳng hạn `appsettings.json` được đọc bằng `System.Text.Json`/Configuration package đã cài, hoặc tệp cấu hình ngoài thư mục cài đặt. Không commit mật khẩu hoặc chuỗi kết nối chứa thông tin bí mật lên Git.
 
-`ReadWriteCreate` cho phép SQLite tạo file Database khi file chưa tồn tại. SQLite không có lệnh `CREATE DATABASE` như SQL Server; file được tạo khi mở kết nối ở chế độ tạo mới.
-
-Khi khởi động, `Program.cs` phải đọc cấu hình, tạo `DbConnectionFactory`, gọi `DbInitializer.Initialize(connectionFactory)` rồi mới tạo và chạy `MainForm`. Nếu khởi tạo Database thất bại, ứng dụng hiển thị thông báo lỗi rõ ràng và không tiếp tục mở màn hình nghiệp vụ trong trạng thái CSDL chưa sẵn sàng.
-
-Các script trong `database/` được nhúng vào assembly `HotelManagement.Infrastructure`:
-
-1. `01_CreateDatabase.sql`: tài liệu hóa bước tạo Database; với SQLite, thao tác tạo file được thực hiện bởi `ReadWriteCreate`, không phải câu lệnh `CREATE DATABASE`.
-2. `02_CreateTables.sql`: tạo các bảng và ràng buộc khai báo ngay trong bảng.
-3. `03_CreateConstraintsAndIndexes.sql`: tạo các index bổ sung.
-4. `04_SeedData.sql`: thêm dữ liệu mẫu khi Database được khởi tạo lần đầu.
-
-Không commit file `.sqlite` đang sử dụng lên Git. Mỗi thành viên có Database cục bộ riêng được tạo từ cùng schema và seed script.
-````
 ### 3.4. Lưu ý về Rider và WinForms Designer
 
-Ứng dụng WinForms sử dụng `OutputType=WinExe`, vì vậy không tự mở cửa sổ Console khi chạy. Khi cần ghi thông tin debug, ưu tiên `System.Diagnostics.Debug.WriteLine()` và xem trong cửa sổ Debug/Output của Rider. Nếu gọi Win32 `AllocConsole()` từ Form, Windows sẽ mở thêm **cửa sổ Console hệ thống**; đây không phải một Form WinForms thứ hai. Chỉ sử dụng `AllocConsole()` khi chủ động muốn mở cửa sổ console riêng và phải gỡ mã debug trước khi phát hành.
+Nếu Designer của một Form gặp lỗi, vẫn có thể chỉnh sửa mã `Form.cs`/`Form.Designer.cs`, nhưng không sửa thủ công phần mã do Designer sinh ra nếu chưa hiểu cấu trúc.
 
 ---
 
@@ -195,11 +143,11 @@ Luồng xử lý thống nhất:
 ```text
 WinForms Form / UserControl
         ↓ gọi
-Service (nghiệp vụ + validation)
+Service (nghiệp vụ + kiểm tra quy tắc)
         ↓ gọi
-Repository / DataAccess
-        ↓ ADO.NET – Microsoft.Data.Sqlite
-SQLite file (HotelManagementDb.sqlite)
+Repository / DataAccess (ADO.NET + SQL)
+        ↓
+SQL Server LocalDB
 ```
 
 | Tầng | Trách nhiệm | Không thực hiện |
@@ -240,16 +188,17 @@ HotelManagement/
 │   │   │   │   └── ActiveStaysView.cs           # S12 – Danh sách lưu trú đang diễn ra
 │   │   │   ├── Services/
 │   │   │   │   ├── ServiceCatalogView.cs        # S13 – Danh mục dịch vụ
-│   │   │   │   └── ServiceUsageView.cs          # S14 – Ghi nhận dịch vụ phát sinh
+│   │   │   │   ├── ServiceFormView.cs            # S14 – Thêm/cập nhật dịch vụ
+│   │   │   │   └── ServiceUsageView.cs           # S15 – Ghi nhận dịch vụ phát sinh
 │   │   │   ├── CheckOut/
-│   │   │   │   └── CheckOutView.cs              # S15 – Trả phòng và thanh toán
+│   │   │   │   └── CheckOutView.cs              # S16 – Trả phòng và thanh toán
 │   │   │   ├── Invoices/
-│   │   │   │   ├── InvoiceListView.cs           # S16 – Danh sách hóa đơn
-│   │   │   │   └── InvoiceDetailView.cs         # S17 – Chi tiết và in mô phỏng
+│   │   │   │   ├── InvoiceListView.cs           # S17 – Danh sách hóa đơn
+│   │   │   │   └── InvoiceDetailView.cs         # S18 – Chi tiết và in mô phỏng
 │   │   │   ├── Housekeeping/
-│   │   │   │   └── HousekeepingView.cs          # S18 – Dọn phòng
+│   │   │   │   └── HousekeepingView.cs          # S19 – Dọn phòng
 │   │   │   └── Reports/
-│   │   │       └── MonthlyReportView.cs         # S19 – Báo cáo tháng
+│   │   │       └── MonthlyReportView.cs         # S20 – Báo cáo tháng
 │   │   ├── Controls/                   # Control dùng chung
 │   │   ├── Common/                     # Dialog, format, binding dùng chung
 │   │   └── Resources/                  # Icon, hình giao diện
@@ -267,7 +216,6 @@ HotelManagement/
 │       ├── Data/
 │       │   ├── DbConnectionFactory.cs
 │       │   ├── DbInitializer.cs
-│       │   ├── SqliteValueConverter.cs
 │       │   └── Repositories/
 │       ├── Configuration/             # Đọc cấu hình cục bộ
 │       └── Sql/                        # Câu lệnh SQL dùng chung nếu cần
@@ -287,17 +235,15 @@ HotelManagement/
 ├── .gitignore
 └── README.md
 ```
-**Quy ước lưu trữ Database:** file `HotelManagementDb.sqlite` được tạo tại `%LOCALAPPDATA%\HotelManagement\Data\` trên từng máy. File Database runtime và các file phụ `-wal`, `-shm` không nằm trong repository Git.
 
-**Quy ước SQL resources:** bốn file trong `database/` được nhúng vào `HotelManagement.Infrastructure` bằng `EmbeddedResource`; `DbInitializer` đọc resource theo logical name. Không phụ thuộc vào working directory của Rider để tìm script lúc chạy.
 ### 4.3. Quy tắc phụ thuộc
 
 - `WinForms` được tham chiếu `Core` và `Infrastructure`.
 - `Infrastructure` được tham chiếu `Core`.
 - `Core` không tham chiếu `WinForms` hoặc `Infrastructure`.
-- Form chỉ gọi Service; Service gọi Repository; Repository thực thi SQL thông qua `Microsoft.Data.Sqlite` và ADO.NET.
-- `DbConnectionFactory` là nơi duy nhất tạo connection string và `SqliteConnection`; Repository không tự tạo đường dẫn Database riêng.
+- Form chỉ gọi Service; Service gọi Repository; Repository thực thi SQL.
 - Entity là lớp dữ liệu nghiệp vụ, không phải Form và không chứa logic truy vấn SQL.
+- Các nghiệp vụ quan trọng như check-in, ghi dịch vụ, check-out phải nằm trong Service để có thể kiểm thử và không bị lặp ở nhiều màn hình.
 
 ---
 
@@ -305,7 +251,7 @@ HotelManagement/
 
 ### 5.1. Form chính và nguyên tắc đếm màn hình
 
-`MainForm` là khung cửa sổ chính sau khi mở chương trình, chịu trách nhiệm điều hướng và hiển thị nội dung. `MainForm` **không tính** là một trong 19 màn hình nghiệp vụ.
+`MainForm` là khung cửa sổ chính sau khi mở chương trình, chịu trách nhiệm điều hướng và hiển thị nội dung. `MainForm` **không tính** là một trong 20 màn hình nghiệp vụ.
 
 Bố cục đề xuất:
 
@@ -316,14 +262,14 @@ Bố cục đề xuất:
 
 **Quy ước để đáp ứng yêu cầu 15–20 màn hình:**
 
-1. Đồ án triển khai **19 màn hình nghiệp vụ**, đánh mã từ `S01` đến `S19` như bảng bên dưới.
-2. Mỗi màn hình là một điểm đến điều hướng độc lập trong khu vực nội dung của `MainForm`. Có thể triển khai bằng `UserControl`; không bắt buộc phải tạo 19 cửa sổ `Form` độc lập.
+1. Đồ án triển khai **20 màn hình nghiệp vụ**, đánh mã từ `S01` đến `S20` như bảng bên dưới.
+2. Mỗi màn hình là một điểm đến điều hướng độc lập trong khu vực nội dung của `MainForm`. Có thể triển khai bằng `UserControl`; không bắt buộc phải tạo 20 cửa sổ `Form` độc lập.
 3. Các màn hình danh sách và màn hình thêm/cập nhật được tách riêng khi chúng có luồng nhập liệu, trường dữ liệu và thao tác lưu riêng.
 4. `MessageBox`, hộp thoại xác nhận, tab, panel chi tiết nhỏ và popup chọn dữ liệu **không được tính** thành màn hình riêng.
 5. Màn hình tạo/cập nhật được mở từ nút Thêm hoặc Sửa của màn hình danh sách; sau khi lưu/hủy thì quay lại màn hình danh sách.
 6. Không bổ sung màn hình đăng nhập vì phiên bản đồ án hiện tại không yêu cầu quản lý tài khoản hoặc phân quyền.
 
-### 5.2. Danh sách 19 màn hình nghiệp vụ
+### 5.2. Danh sách 20 màn hình nghiệp vụ
 
 | Mã | Màn hình | Thành phần giao diện chính | Thao tác / phạm vi |
 |---|---|---|---|
@@ -340,14 +286,15 @@ Bố cục đề xuất:
 | **S11** | Nhận phòng (Check-in) | Danh sách đặt phòng đến hạn; tìm khách; chọn phòng; số khách; thông tin giấy tờ | Check-in từ đặt phòng hoặc khách vãng lai; tạo `Stay`; chuyển phòng sang `OCCUPIED`. |
 | **S12** | Danh sách lưu trú đang diễn ra | Danh sách phòng đang có khách, khách đại diện, giờ check-in, số khách, tổng dịch vụ tạm tính | Tra cứu các `Stay` đang mở; chọn lượt lưu trú để mở S15 ghi dịch vụ hoặc S16 trả phòng. |
 | **S13** | Danh mục dịch vụ | `DataGridView`, tìm kiếm, lọc nhóm và trạng thái | Xem dịch vụ đồ uống/giặt ủi/thuê xe/khác; mở S14 để thêm/cập nhật/ngừng cung cấp. |
-| **S14** | Ghi nhận dịch vụ phát sinh | Thông tin lượt lưu trú/phòng; chọn dịch vụ; số lượng; đơn giá; bảng các khoản đã ghi | Thêm dịch vụ vào `Stay` đang `IN_PROGRESS`; lưu đơn giá tại thời điểm phát sinh và thành tiền. |
-| **S15** | Trả phòng và thanh toán | Thông tin `Stay`, thời gian ở, cách tính giờ/ngày, bảng dịch vụ, tiền phòng, tiền cọc, số tiền phải thu/hoàn | Tính tiền; cho phép kiểm tra trước khi xác nhận; bấm Thanh toán để mô phỏng thành công và lưu hóa đơn/payment. Sau đó mở S18 để in mô phỏng. |
-| **S16** | Danh sách hóa đơn | `DataGridView`, lọc ngày lập/trạng thái/mã hóa đơn/mã phòng/khách | Tra cứu hóa đơn đã tạo; mở S18 xem chi tiết và tiếp tục in nếu chưa in. |
-| **S17** | Chi tiết hóa đơn và in mô phỏng | Thông tin khách/phòng/thời gian; chi tiết tiền phòng/dịch vụ/cọc; trạng thái thanh toán và in | Xem nội dung hóa đơn; bấm In hóa đơn để hiển thị thông báo hoàn thành và lưu `PrintedAt`; hoàn tất luồng checkout theo quy tắc nghiệp vụ. |
-| **S18** | Dọn phòng | Danh sách phòng `CLEANING`, thông tin phòng và nút xác nhận dọn xong | Xác nhận phòng đã dọn; chuyển về `AVAILABLE` hoặc `RESERVED` nếu còn đặt phòng được gán có hiệu lực. |
-| **S19** | Báo cáo tháng | Bộ chọn tháng/năm; thẻ tổng hợp; bảng số liệu; biểu đồ bổ sung | Xem công suất phòng, doanh thu phòng và doanh thu dịch vụ theo tháng. |
+| **S14** | Thêm/cập nhật dịch vụ | Form tên dịch vụ, nhóm, đơn vị tính, đơn giá, mô tả, trạng thái | Lưu thông tin dịch vụ; không xóa cứng dịch vụ đã phát sinh trong lịch sử. |
+| **S15** | Ghi nhận dịch vụ phát sinh | Thông tin lượt lưu trú/phòng; chọn dịch vụ; số lượng; đơn giá; bảng các khoản đã ghi | Thêm dịch vụ vào `Stay` đang `IN_PROGRESS`; lưu đơn giá tại thời điểm phát sinh và thành tiền. |
+| **S16** | Trả phòng và thanh toán | Thông tin `Stay`, thời gian ở, cách tính giờ/ngày, bảng dịch vụ, tiền phòng, tiền cọc, số tiền phải thu/hoàn | Tính tiền; cho phép kiểm tra trước khi xác nhận; bấm Thanh toán để mô phỏng thành công và lưu hóa đơn/payment. Sau đó mở S18 để in mô phỏng. |
+| **S17** | Danh sách hóa đơn | `DataGridView`, lọc ngày lập/trạng thái/mã hóa đơn/mã phòng/khách | Tra cứu hóa đơn đã tạo; mở S18 xem chi tiết và tiếp tục in nếu chưa in. |
+| **S18** | Chi tiết hóa đơn và in mô phỏng | Thông tin khách/phòng/thời gian; chi tiết tiền phòng/dịch vụ/cọc; trạng thái thanh toán và in | Xem nội dung hóa đơn; bấm In hóa đơn để hiển thị thông báo hoàn thành và lưu `PrintedAt`; hoàn tất luồng checkout theo quy tắc nghiệp vụ. |
+| **S19** | Dọn phòng | Danh sách phòng `CLEANING`, thông tin phòng và nút xác nhận dọn xong | Xác nhận phòng đã dọn; chuyển về `AVAILABLE` hoặc `RESERVED` nếu còn đặt phòng được gán có hiệu lực. |
+| **S20** | Báo cáo tháng | Bộ chọn tháng/năm; thẻ tổng hợp; bảng số liệu; biểu đồ bổ sung | Xem công suất phòng, doanh thu phòng và doanh thu dịch vụ theo tháng. |
 
-**Tổng số: 19 màn hình nghiệp vụ (`S01`–`S19`).** Danh sách trên là căn cứ thống nhất để lập task, tạo thư mục giao diện, chia người thực hiện và nghiệm thu. Không cộng thêm các popup hoặc hộp thoại xác nhận vào con số này.
+**Tổng số: 20 màn hình nghiệp vụ (`S01`–`S20`).** Danh sách trên là căn cứ thống nhất để lập task, tạo thư mục giao diện, chia người thực hiện và nghiệm thu. Không cộng thêm các popup hoặc hộp thoại xác nhận vào con số này.
 
 ### 5.3. Luồng điều hướng giữa các màn hình
 
@@ -363,10 +310,10 @@ S01 Tổng quan & sơ đồ phòng
  ├── S12 Lưu trú đang diễn ra
  │    ├──> S15 Ghi nhận dịch vụ phát sinh
  │    └──> S16 Trả phòng & thanh toán ──> S18 Chi tiết hóa đơn/in mô phỏng
- ├── S13 Danh mục dịch vụ 
- ├── S16 Danh sách hóa đơn ──────> S17 Chi tiết hóa đơn/in mô phỏng
- ├── S18 Dọn phòng
- └── S19 Báo cáo tháng
+ ├── S13 Danh mục dịch vụ ───────> S14 Thêm/cập nhật dịch vụ
+ ├── S17 Danh sách hóa đơn ──────> S18 Chi tiết hóa đơn/in mô phỏng
+ ├── S19 Dọn phòng
+ └── S20 Báo cáo tháng
 ```
 
 Sơ đồ thể hiện các điểm điều hướng chính, không phải sơ đồ trình tự xử lý chi tiết. Việc mở S15/S16 phải mang theo `StayId`; việc mở S18 phải mang theo `InvoiceId`, tránh truy vấn lại bằng mã phòng hoặc thông tin hiển thị không duy nhất.
@@ -408,19 +355,7 @@ Sơ đồ thể hiện các điểm điều hướng chính, không phải sơ �
 
 ### 6.2. F02 – Quản lý tầng, loại phòng và phòng
 
-**Dữ liệu tầng:** mã tầng, số tầng, tên hiển thị, thứ tự sắp xếp, trạng thái hoạt động.
 
-**Dữ liệu loại phòng:** mã loại, tên loại, mô tả, sức chứa tối đa, giá theo giờ, giá theo ngày, trạng thái hoạt động.
-
-**Dữ liệu phòng:** mã phòng, tầng, loại phòng, trạng thái hiện tại, ghi chú, trạng thái hoạt động.
-
-**Thao tác:**
-
-- Thêm, sửa thông tin phòng và loại phòng.
-- Ngừng sử dụng thay vì xóa cứng nếu bản ghi đã phát sinh đặt phòng/lưu trú.
-- Khi đổi loại phòng, không được vi phạm dữ liệu đặt phòng đang còn hiệu lực.
-- Không cho phép trùng mã phòng trong toàn khách sạn.
-- Chỉ phòng đang `AVAILABLE` mới được chuyển thủ công sang trạng thái `CLEANING` trong trường hợp bảo trì/dọn bổ sung; không cho phép chỉnh tay sang `OCCUPIED` hoặc `RESERVED`. Hai trạng thái này phải được cập nhật qua nghiệp vụ đặt phòng/check-in.
 
 ### 6.3. F03 – Quản lý khách hàng
 **Thông tin lưu:** họ tên, loại giấy tờ (`CCCD` hoặc `PASSPORT`), số giấy tờ, số điện thoại, email (không bắt buộc), địa chỉ (không bắt buộc), ngày tạo.
@@ -503,184 +438,30 @@ Thuê xe.
 Khác.
 
 
+Nhân viên được thêm, sửa, ngừng cung cấp dịch vụ. Không xóa cứng dịch vụ đã xuất hiện trong lịch sử sử dụng.
+
+
+
+
 ### 6.7. F07 – Ghi nhận dịch vụ phát sinh
-
-Luồng chính:
-
-
-
-Lễ tân chọn phòng đang OCCUPIED hoặc lượt lưu trú IN_PROGRESS.
-
-Chọn dịch vụ từ danh mục.
-
-Nhập số lượng và xác nhận đơn giá.
-
-Hệ thống ghi thời điểm sử dụng, số lượng, đơn giá tại thời điểm ghi nhận và thành tiền.
-
-Tổng tiền dịch vụ của lượt lưu trú được cập nhật khi xem chi tiết hoặc tính checkout.
-
-
-Quy tắc:
-
-
-
-Chỉ ghi dịch vụ cho lượt lưu trú đang mở.
-
-Số lượng phải lớn hơn 0.
-
-Đơn giá tại thời điểm ghi nhận được lưu riêng, không thay đổi khi giá trong danh mục thay đổi.
-
-Thành tiền = số lượng × đơn giá tại thời điểm ghi nhận.
-
-Không cho phép thêm dịch vụ sau khi Stay đã COMPLETED.
-
-Dịch vụ thuê xe/giặt ủi chỉ là khoản phí do nhân viên ghi nhận; không gọi hệ thống của đối tác.
-
-
 
 
 
 ### 6.8. F08 – Check-out / Trả phòng và tính tiền
 
-Dữ liệu tính tiền:
-
-
-
-Thời điểm check-in thực tế.
-
-Thời điểm check-out thực tế.
-
-Giá giờ và giá ngày đã chụp tại thời điểm check-in.
-
-Cách tính tiền được lễ tân chọn: theo giờ hoặc theo ngày.
-
-Tổng tiền dịch vụ.
-
-Tiền cọc thực tế đã nhận.
-
-
-Công thức đề xuất để thống nhất cho đồ án:
-
-
-Gọi H là tổng số giờ lưu trú thực tế, làm tròn lên đến giờ nguyên gần nhất.
-
-
-
-Nếu chọn theo giờ: RoomCharge = max(1, ceil(H)) × HourlyRateAtCheckIn.
-
-Nếu chọn theo ngày: RoomCharge = max(1, ceil(H / 24)) × DailyRateAtCheckIn.
-
-ServiceCharge = tổng Amount của các StayService.
-
-SubTotal = RoomCharge + ServiceCharge.
-
-DepositDeducted = min(DepositAmount, SubTotal).
-
-AmountDue = max(0, SubTotal - DepositAmount).
-
-RefundDue = max(0, DepositAmount - SubTotal).
-
-
-
-Quy tắc trên là quy tắc tính đơn giản cho đồ án, chưa áp dụng giờ nhận/trả phòng chuẩn khách sạn, phụ thu quá giờ, miễn phí vài phút, khuyến mãi hoặc thuế. Nếu giảng viên có quy tắc khác, cập nhật công thức tại đây và trong CheckOutService.
-
-
-
-Luồng chính:
-
-
-
-Chọn phòng đang có khách.
-
-Hệ thống tìm Stay IN_PROGRESS tương ứng.
-
-Ghi nhận thời điểm check-out thực tế.
-
-Lễ tân chọn tính theo giờ hoặc theo ngày.
-
-Hệ thống tính tiền phòng, tiền dịch vụ, tiền cọc được trừ, số tiền phải thu hoặc hoàn lại.
-
-Hiển thị bảng tổng hợp để lễ tân kiểm tra.
-
-Lễ tân bấm Thanh toán. Ứng dụng mô phỏng thanh toán thành công ngay, không gọi cổng thanh toán; đồng thời lưu Invoice và Payment trong CSDL. Stay chuyển sang CHECKOUT_PENDING để khóa việc ghi thêm dịch vụ trong lúc chờ hoàn tất.
-
-Lễ tân bấm In hóa đơn. Ứng dụng hiển thị thông báo hoàn thành và lưu thời điểm thao tác in mô phỏng.
-
-Sau khi thao tác in mô phỏng thành công, hệ thống chuyển Stay sang COMPLETED, Reservation (nếu có) sang COMPLETED, Room sang CLEANING. Nếu ứng dụng bị đóng sau thanh toán nhưng trước khi in, hóa đơn vẫn được lưu; người dùng có thể mở lại hóa đơn để tiếp tục thao tác in và hoàn tất trả phòng.
-
-Khi nhân viên dọn xong, thao tác Hoàn tất dọn phòng chuyển Room sang AVAILABLE, hoặc RESERVED nếu phòng đã được gán cho một đặt phòng khác còn hiệu lực.
-
-
-Quy tắc:
-
-
-
-Thời điểm check-out phải lớn hơn thời điểm check-in.
-
-Không cho phép trả phòng hai lần cho cùng một Stay.
-
-Hóa đơn chỉ được tạo một lần cho một Stay.
-
-Cần dùng SQL transaction cho từng bước: (1) tạo hóa đơn + ghi thanh toán + chuyển Stay sang CHECKOUT_PENDING; (2) sau khi in mô phỏng, cập nhật PrintedAt + chuyển Stay/Reservation/Room sang trạng thái hoàn tất tương ứng.
-
-Nút thanh toán chỉ mô phỏng giao dịch nội bộ, không đại diện cho một giao dịch ngân hàng thực tế.
-
-Nút in không yêu cầu máy in và không phát sinh kết nối mạng; chỉ hiển thị thông báo thành công theo yêu cầu.
-
-
 
 
 ### 6.9. F09 – Hóa đơn
-
-Thông tin tối thiểu trên hóa đơn:
-
-
-
-Mã hóa đơn, ngày lập, mã phòng, thông tin khách.
-
-Thời điểm nhận phòng và trả phòng.
-
-Cách tính tiền, số giờ/ngày và tiền phòng.
-
-Danh sách dịch vụ, số lượng, đơn giá và thành tiền.
-
-Tổng tiền phòng, tổng tiền dịch vụ, tiền cọc được trừ.
-
-Số tiền cần thu thêm hoặc số tiền cần hoàn lại.
-
-Trạng thái thanh toán và trạng thái in mô phỏng.
-
-
-Hóa đơn đã thanh toán không được sửa trực tiếp. Nếu nhập sai dữ liệu trước khi hoàn tất, quay lại màn hình tính checkout để điều chỉnh trước khi xác nhận thanh toán.
-
-
 
 
 
 ### 6.10. F10 – Dọn phòng
 
-- Danh sách phòng `CLEANING` được hiển thị riêng hoặc lọc trên sơ đồ phòng.
-- Nhân viên chọn phòng, kiểm tra và bấm **Hoàn tất dọn phòng**.
-- Hệ thống cập nhật trạng thái `AVAILABLE`.
-- Không yêu cầu quản lý checklist vệ sinh, người dọn, vật tư hoặc thời gian làm vệ sinh trong MVP.
+
 
 ### 6.11. F11 – Báo cáo tháng
 
-Báo cáo có bộ lọc tháng/năm và tối thiểu ba chỉ số:
 
-
-
-Công suất phòng (%): đề xuất tính bằng Tổng số giờ phòng có khách trong tháng / (Số phòng đang kinh doanh × Tổng số giờ trong tháng) × 100. Thời gian Stay giao với tháng báo cáo chỉ tính phần giao nhau; tính cả Stay IN_PROGRESS, CHECKOUT_PENDING và COMPLETED có khoảng lưu trú giao với tháng. Cách tính giờ giúp xử lý cả lưu trú ngắn theo giờ.
-
-Doanh thu phòng: tổng RoomCharge của các hóa đơn đã thanh toán và đã hoàn tất thao tác in mô phỏng trong tháng (Invoice.Status = PAID, PrintedAt khác null).
-
-Doanh thu dịch vụ: tổng ServiceCharge của các hóa đơn đã thanh toán và đã hoàn tất thao tác in mô phỏng trong tháng.
-
-
-Quy ước: tháng báo cáo dựa trên ngày tạo/hoàn tất hóa đơn; công suất dựa trên thời gian Stay thực tế giao với tháng được chọn. Tiền cọc là khoản thanh toán trước, không phải khoản giảm doanh thu; chỉ được trừ khi tính số tiền cần thu tại checkout.
-
-
-Giao diện nên có thẻ tổng số, bảng tổng hợp; biểu đồ cột hoặc đường là phần trình bày bổ sung, không thay thế số liệu.
 
 ## 7. Quy tắc trạng thái nghiệp vụ
 
@@ -756,17 +537,17 @@ Các mẫu Regex chỉ là kiểm tra định dạng đầu vào, không thay th
 - Bọc các thao tác dễ phát sinh lỗi (CSDL, file, chuyển đổi dữ liệu) trong `try-catch` phù hợp.
 - Thông báo lỗi dễ hiểu cho người dùng; không hiển thị toàn bộ stack trace.
 - Ghi log chi tiết lỗi vào tệp cục bộ nếu cần phục vụ debug.
-- Dùng `using`/`await using` để đóng `SqliteConnection`, `SqliteCommand`, `SqliteDataReader` và giải phóng tài nguyên.
+- Dùng `using`/`await using` để đóng `SqlConnection`, `SqlCommand`, `SqlDataReader` và giải phóng tài nguyên.
+- `finally` chỉ dùng khi cần dọn dẹp thủ công; ưu tiên `using`.
 - Không dùng `catch (Exception) { }` để nuốt lỗi.
 - Xử lý riêng lỗi trùng khóa, vi phạm khóa ngoại, mất kết nối CSDL và lỗi dữ liệu không hợp lệ.
 
 ### 8.3. Quy tắc SQL an toàn
 
-- Tất cả truy vấn nhận dữ liệu nhập từ Form phải dùng `SqliteParameter`.
-- Không nối chuỗi trực tiếp từ TextBox vào câu SQL. Với tên bảng/cột động, chỉ dùng danh sách tên cố định trong code; không nhận tên đối tượng SQL từ người dùng.
-- Dùng `SqliteTransaction` cho các thao tác cập nhật nhiều bảng trong một nghiệp vụ như đặt phòng, check-in và checkout.
-- Bảo đảm `ForeignKeys = true` trên mọi connection.
-- Không để Form tự mở kết nối SQLite riêng lẻ.
+- Tất cả truy vấn nhận dữ liệu nhập từ Form phải dùng `SqlParameter`.
+- Không nối chuỗi trực tiếp từ TextBox vào câu SQL.
+- Dùng transaction cho các thao tác cập nhật nhiều bảng trong một nghiệp vụ.
+- Không để Form tự mở kết nối SQL riêng lẻ.
 
 ---
 
@@ -798,11 +579,11 @@ Các mẫu Regex chỉ là kiểm tra định dạng đầu vào, không thay th
 
 ### 9.3. Xử lý dữ liệu và tiền
 
-- Tất cả truy vấn nhận dữ liệu nhập từ Form phải dùng `SqliteParameter`.
-- Không nối chuỗi trực tiếp từ TextBox vào câu SQL. Với tên bảng/cột động, chỉ dùng danh sách tên cố định trong code; không nhận tên đối tượng SQL từ người dùng.
-- Dùng `SqliteTransaction` cho các thao tác cập nhật nhiều bảng trong một nghiệp vụ như đặt phòng, check-in và checkout.
-- Bảo đảm `ForeignKeys = true` trên mọi connection.
-- Không để Form tự mở kết nối SQLite riêng lẻ.
+- Dùng `decimal` trong C# và `DECIMAL(18,0)` trong SQL Server cho tiền VND của đồ án.
+- Không tính tiền bằng `double`.
+- Không xóa cứng dữ liệu danh mục đã được sử dụng; dùng `IsActive`.
+- Lưu giá dịch vụ tại thời điểm phát sinh và giá phòng tại thời điểm check-in để lịch sử hóa đơn không bị thay đổi khi cập nhật bảng giá.
+
 ---
 
 ## 10. Phân chia công việc cho 3 thành viên
@@ -817,19 +598,19 @@ Các mẫu Regex chỉ là kiểm tra định dạng đầu vào, không thay th
 
 ### 10.2. Phân công đề xuất
 
-Phân công theo đúng 19 màn hình đã đánh mã ở mục 5.2. Mỗi thành viên chịu trách nhiệm trọn module: giao diện, Service, Repository và validation trong phạm vi được giao.
+Phân công theo đúng 20 màn hình đã đánh mã ở mục 5.2. Mỗi thành viên chịu trách nhiệm trọn module: giao diện, Service, Repository và validation trong phạm vi được giao.
 
 | Thành viên | Màn hình phụ trách | Module / nghiệp vụ | Phần code chính | Khối lượng ước lượng |
 |---|---|---|---|---:|
-| **Thành viên 1** - [Tên người phụ trách]| **S01–S06, S18** (7 màn hình) | Tổng quan/sơ đồ phòng; quản lý tầng; danh sách và biểu mẫu loại phòng; danh sách và biểu mẫu phòng; dọn phòng. | `Forms/Dashboard`, `Forms/Floors`, `Forms/RoomTypes`, `Forms/Rooms`, `Forms/Housekeeping`; `RoomService`, `FloorService`, `RoomTypeService`; `RoomRepository`, `FloorRepository`, `RoomTypeRepository`. Đồng thời khởi tạo solution, cấu hình kết nối và nền tảng database, điều phối tích hợp. | **34%** (F01, F02, F10)|
+| **Thành viên 1** - [Tên người phụ trách]| **S01–S06, S19** (7 màn hình) | Tổng quan/sơ đồ phòng; quản lý tầng; danh sách và biểu mẫu loại phòng; danh sách và biểu mẫu phòng; dọn phòng. | `Forms/Dashboard`, `Forms/Floors`, `Forms/RoomTypes`, `Forms/Rooms`, `Forms/Housekeeping`; `RoomService`, `FloorService`, `RoomTypeService`; `RoomRepository`, `FloorRepository`, `RoomTypeRepository`. Đồng thời khởi tạo solution, cấu hình kết nối và nền tảng database, điều phối tích hợp. | **34%** (F01, F02, F10)|
 | **Thành viên 2** - [Bùi Hữu Trí]| **S07–S12** (6 màn hình) | Danh sách/biểu mẫu khách hàng; danh sách/biểu mẫu đặt phòng; check-in; danh sách lưu trú đang diễn ra. | `Forms/Customers`, `Forms/Reservations`, `Forms/CheckIn`; `CustomerService`, `ReservationService`, `CheckInService`; `CustomerRepository`, `ReservationRepository`, `StayRepository` (phần tạo và truy vấn lượt lưu trú). | **33%** (F03, F04, F05)|
-| **Thành viên 3** - [Tên người phụ trách]| **S13–S17, S19** (7 màn hình) | Danh mục và biểu mẫu dịch vụ; ghi nhận dịch vụ; check-out/thanh toán; danh sách/chi tiết hóa đơn; báo cáo tháng. | `Forms/Services`, `Forms/CheckOut`, `Forms/Invoices`, `Forms/Reports`; `ServiceCatalogService`, `ServiceUsageService`, `CheckOutService`, `InvoiceService`, `ReportService`; `ServiceRepository`, `StayServiceRepository`, `InvoiceRepository`, `PaymentRepository`, `ReportRepository`. | **33%** (F06, F07, F08, F09, F11)|
+| **Thành viên 3** - [Tên người phụ trách]| **S13–S18, S20** (7 màn hình) | Danh mục và biểu mẫu dịch vụ; ghi nhận dịch vụ; check-out/thanh toán; danh sách/chi tiết hóa đơn; báo cáo tháng. | `Forms/Services`, `Forms/CheckOut`, `Forms/Invoices`, `Forms/Reports`; `ServiceCatalogService`, `ServiceUsageService`, `CheckOutService`, `InvoiceService`, `ReportService`; `ServiceRepository`, `StayServiceRepository`, `InvoiceRepository`, `PaymentRepository`, `ReportRepository`. | **33%** (F06, F07, F08, F09, F11)|
 
 **Lý do phân chia:**
 
 - Thành viên 1 phụ trách dữ liệu nền về cấu trúc khách sạn và trạng thái phòng. S01, S02–S06 và S19 dùng chung dữ liệu `Floor`, `RoomType`, `Room`, nên có mức liên kết cao; việc giao cùng một người giảm xung đột khi cập nhật trạng thái phòng.
 - Thành viên 2 phụ trách trọn luồng trước và tại thời điểm khách nhận phòng: hồ sơ khách → đặt phòng → check-in → danh sách lượt lưu trú đang mở. Đây là nhóm có logic kiểm tra trùng lịch và sức chứa tương đối phức tạp.
-- Thành viên 3 phụ trách luồng phát sinh doanh thu: danh mục dịch vụ → ghi dịch vụ → checkout → hóa đơn/thanh toán; S19 đọc dữ liệu hóa đơn và lượt lưu trú để tổng hợp báo cáo.
+- Thành viên 3 phụ trách luồng phát sinh doanh thu: danh mục dịch vụ → ghi dịch vụ → checkout → hóa đơn/thanh toán; S20 đọc dữ liệu hóa đơn và lượt lưu trú để tổng hợp báo cáo.
 - Số màn hình được chia theo tỷ lệ **7–6–7**. Khối lượng ước lượng không chỉ dựa trên số màn hình mà còn xét độ phức tạp của nghiệp vụ, số bảng dữ liệu và trách nhiệm tích hợp.
 
 ### 10.3. Ranh giới trách nhiệm và phụ thuộc
@@ -839,11 +620,11 @@ Phân công theo đúng 19 màn hình đã đánh mã ở mục 5.2. Mỗi thàn
 | Solution, project references, cấu hình chung và `MainForm` | Thành viên 1 | Cả nhóm review trước khi thêm package hoặc đổi cấu trúc |
 | SQL schema và script khởi tạo ban đầu | Thành viên 1 điều phối | Thành viên 2 và 3 rà soát các bảng/khóa ngoại liên quan module của mình |
 | Entity và enum chung | Cả nhóm thống nhất; thành viên 1 tích hợp | Thành viên 2/3 không tự đổi tên/kiểu trường đã chốt |
-| S01–S06 và S18: giao diện, Service, Repository | Thành viên 1 | Thành viên 2/3 cung cấp yêu cầu trạng thái phòng và dữ liệu liên quan |
+| S01–S06 và S19: giao diện, Service, Repository | Thành viên 1 | Thành viên 2/3 cung cấp yêu cầu trạng thái phòng và dữ liệu liên quan |
 | S07–S12: khách hàng, đặt phòng, check-in, Stay | Thành viên 2 | Thành viên 1 phối hợp quy tắc phòng; thành viên 3 thống nhất cấu trúc `Stay` và tiền cọc |
-| S13–S17: dịch vụ, checkout, hóa đơn | Thành viên 3 | Thành viên 2 cung cấp hợp đồng `Stay`; thành viên 1 phối hợp cập nhật trạng thái phòng khi checkout hoàn tất |
-| S19: báo cáo tháng | Thành viên 3 | Thành viên 1 cung cấp dữ liệu phòng/tổng số phòng; thành viên 2 kiểm tra dữ liệu Stay; thành viên 3 chịu trách nhiệm truy vấn tổng hợp |
-| Điều hướng và component dùng chung | Thành viên 1 tích hợp | Mỗi thành viên đăng ký màn hình, tên điều khiển và luồng mở màn hình theo mã S01–S19 |
+| S13–S18: dịch vụ, checkout, hóa đơn | Thành viên 3 | Thành viên 2 cung cấp hợp đồng `Stay`; thành viên 1 phối hợp cập nhật trạng thái phòng khi checkout hoàn tất |
+| S20: báo cáo tháng | Thành viên 3 | Thành viên 1 cung cấp dữ liệu phòng/tổng số phòng; thành viên 2 kiểm tra dữ liệu Stay; thành viên 3 chịu trách nhiệm truy vấn tổng hợp |
+| Điều hướng và component dùng chung | Thành viên 1 tích hợp | Mỗi thành viên đăng ký màn hình, tên điều khiển và luồng mở màn hình theo mã S01–S20 |
 | Kiểm thử tích hợp toàn hệ thống | Cả nhóm | Mỗi người kiểm thử màn hình và nghiệp vụ trong phạm vi được giao |
 | Publish và Inno Setup | Thành viên 1 tích hợp | Thành viên 2/3 kiểm tra luồng nghiệp vụ trên bản cài đặt máy sạch |
 
@@ -857,15 +638,15 @@ Mỗi màn hình chỉ có **một người chịu trách nhiệm chính**. Ngư
 |---|---|---|
 | `FloorService` | `GetFloors()`, `CreateFloor()`, `UpdateFloor()`, `DeactivateFloor()` | S02: quản lý tầng. |
 | `RoomTypeService` | `GetRoomTypes()`, `CreateRoomType()`, `UpdateRoomType()` | S03–S04: danh sách và biểu mẫu loại phòng. |
-| `RoomService` | `GetRoomsByFloor()`, `GetRoomStatus()`, `CreateRoom()`, `UpdateRoom()`, `CompleteCleaning()` | S01, S05–S06, S18: sơ đồ, danh sách/biểu mẫu phòng và xác nhận phòng sẵn sàng. |
+| `RoomService` | `GetRoomsByFloor()`, `GetRoomStatus()`, `CreateRoom()`, `UpdateRoom()`, `CompleteCleaning()` | S01, S05–S06, S19: sơ đồ, danh sách/biểu mẫu phòng và xác nhận phòng sẵn sàng. |
 | `CustomerService` | `SearchCustomers()`, `CreateCustomer()`, `UpdateCustomer()` | S07–S08: hồ sơ khách đã lưu. |
 | `ReservationService` | `CheckAvailability()`, `CreateReservation()`, `CancelReservation()` | S09–S10: kết quả còn phòng, thông tin đặt phòng. |
 | `CheckInService` | `CheckInReservation()`, `CheckInWalkIn()` | S11–S12: `Stay` mới và danh sách lượt lưu trú đang mở. |
-| `ServiceCatalogService` | `GetServices()`, `CreateService()`, `UpdateService()`, `DeactivateService()` | S13: danh mục và biểu mẫu dịch vụ. |
-| `ServiceUsageService` | `AddServiceUsage()`, `GetStayServices()` | S14: dòng dịch vụ phát sinh và tổng dịch vụ. |
-| `CheckOutService` | `CalculateCheckout()`, `CompleteCheckout()` | S15: bảng tính tiền và kết quả checkout. |
-| `InvoiceService` | `GetInvoice()`, `ConfirmPayment()`, `MarkPrinted()` | S16–S17: hóa đơn, giao dịch mô phỏng, trạng thái in. |
-| `ReportService` | `GetMonthlyReport()` | S19: công suất, doanh thu phòng và doanh thu dịch vụ. |
+| `ServiceCatalogService` | `GetServices()`, `CreateService()`, `UpdateService()`, `DeactivateService()` | S13–S14: danh mục và biểu mẫu dịch vụ. |
+| `ServiceUsageService` | `AddServiceUsage()`, `GetStayServices()` | S15: dòng dịch vụ phát sinh và tổng dịch vụ. |
+| `CheckOutService` | `CalculateCheckout()`, `CompleteCheckout()` | S16: bảng tính tiền và kết quả checkout. |
+| `InvoiceService` | `GetInvoice()`, `ConfirmPayment()`, `MarkPrinted()` | S17–S18: hóa đơn, giao dịch mô phỏng, trạng thái in. |
+| `ReportService` | `GetMonthlyReport()` | S20: công suất, doanh thu phòng và doanh thu dịch vụ. |
 
 ### 10.5. Những phần không được tự ý sửa khi chưa báo nhóm
 
@@ -921,10 +702,10 @@ Danh sách dưới đây dựa theo phân công tại mục 10.2 và mã chức 
 | Thành viên 2 | F04 – S09–S10: Đặt phòng trước | `feature/F04-reservation-management` |
 | Thành viên 2 | F05 – S11–S12: Check-in và danh sách lưu trú | `feature/F05-checkin-stays` |
 | Thành viên 3 | F06 – S13–S14: Danh mục dịch vụ | `feature/F06-service-catalog` |
-| Thành viên 3 | F07 – S14: Dịch vụ phát sinh | `feature/F07-stay-service` |
-| Thành viên 3 | F08 – S15: Check-out và tính tiền | `feature/F08-checkout` |
-| Thành viên 3 | F09 – S16–S17: Danh sách, chi tiết và in hóa đơn | `feature/F09-invoice` |
-| Thành viên 3 | F11 – S19: Báo cáo tháng | `feature/F11-monthly-report` |
+| Thành viên 3 | F07 – S15: Dịch vụ phát sinh | `feature/F07-stay-service` |
+| Thành viên 3 | F08 – S16: Check-out và tính tiền | `feature/F08-checkout` |
+| Thành viên 3 | F09 – S17–S18: Danh sách, chi tiết và in hóa đơn | `feature/F09-invoice` |
+| Thành viên 3 | F11 – S20: Báo cáo tháng | `feature/F11-monthly-report` |
 
 Các nhánh nền tảng có thể được tạo trước khi triển khai nghiệp vụ:
 
@@ -1006,17 +787,17 @@ Mẫu: `<type>: <mô tả ngắn>`.
 | TC18 | Hoàn tất checkout | Checkout hoàn tất | Stay `COMPLETED`, phòng `CLEANING`. |
 | TC19 | Hoàn tất dọn phòng | Chọn phòng `CLEANING`, xác nhận dọn xong | Phòng chuyển `AVAILABLE`, hoặc `RESERVED` nếu còn đặt phòng gán trước có hiệu lực. |
 | TC20 | Báo cáo tháng | Chọn tháng có dữ liệu | Hiển thị công suất, doanh thu phòng và dịch vụ đúng theo dữ liệu mẫu. |
-| TC21 | Không mở được Database file | File bị khóa, thư mục không có quyền ghi hoặc cấu hình đường dẫn sai | Hiển thị lỗi dễ hiểu; không làm ứng dụng crash đột ngột. |
-| TC22 | Khởi động lần đầu | Máy chưa có file `HotelManagementDb.sqlite` | Chương trình tự tạo thư mục/file, tạo schema, index và seed data. |
-| TC23 | Kiểm tra đủ 19 màn hình | Mở lần lượt các mục điều hướng S01–S20 | Cả 19 màn hình đều mở được, hiển thị đúng tiêu đề/nội dung; không tính MainForm và popup. |
+| TC21 | Mất kết nối CSDL | Tắt LocalDB hoặc cấu hình sai | Thông báo không kết nối được; ứng dụng không crash đột ngột. |
+| TC22 | Khởi động lần đầu | Máy có LocalDB nhưng chưa có database | Chương trình khởi tạo database/schema/seed theo quy trình đã thiết kế. |
+| TC23 | Kiểm tra đủ 20 màn hình | Mở lần lượt các mục điều hướng S01–S20 | Cả 20 màn hình đều mở được, hiển thị đúng tiêu đề/nội dung; không tính MainForm và popup. |
 | TC24 | Điều hướng danh sách – biểu mẫu | Từ S03/S05/S07/S09/S13 mở màn hình thêm-sửa tương ứng, sau đó Lưu hoặc Hủy | Điều hướng đúng màn hình; dữ liệu được lưu hoặc hủy đúng; quay lại danh sách và tải lại dữ liệu. |
 
 ### 12.2. Tiêu chí nghiệm thu tổng thể
 
-- Có đủ **19 màn hình nghiệp vụ S01–S20** theo danh sách tại mục 5.2; các màn hình có thể điều hướng và luồng mở/quay lại hoạt động đúng. `MainForm` và các hộp thoại nhỏ không tính vào số lượng này.
+- Có đủ **20 màn hình nghiệp vụ S01–S20** theo danh sách tại mục 5.2; các màn hình có thể điều hướng và luồng mở/quay lại hoạt động đúng. `MainForm` và các hộp thoại nhỏ không tính vào số lượng này.
 - Ứng dụng khởi động được trên Windows bằng file cài đặt.
 - Không cần Internet để mở ứng dụng và thực hiện nghiệp vụ.
-- File SQLite được tạo và mở thành công tại thư mục dữ liệu người dùng; dữ liệu còn sau khi tắt/mở lại ứng dụng.
+- Kết nối được SQL Server cục bộ và dữ liệu còn sau khi tắt/mở lại ứng dụng.
 - Sơ đồ phòng thể hiện đúng bốn màu trạng thái.
 - Không thể check-in phòng đang có khách hoặc đang dọn.
 - Có thể đặt trước, check-in, ghi dịch vụ, checkout và lưu hóa đơn xuyên suốt.
@@ -1033,8 +814,8 @@ Mẫu: `<type>: <mô tả ngắn>`.
 
 - Hệ điều hành Windows tương thích với WinForms.
 - Nếu dùng bản cài đặt self-contained thì không cần cài .NET Desktop Runtime riêng; runtime .NET được đóng gói cùng ứng dụng.
-- Không cần cài SQL Server, MySQL hoặc Database Server. `Microsoft.Data.Sqlite` và thư viện SQLite native được cung cấp thông qua các package phụ thuộc của ứng dụng.
-- Người dùng cuối không cần Navicat; Navicat chỉ là công cụ phát triển/kiểm tra dữ liệu.
+- Máy triển khai vẫn cần SQL Server Express LocalDB (hoặc SQL Server Express cục bộ) vì self-contained .NET **không bao gồm SQL Server Database Engine**.
+- Không cần SQL Server Management Studio trên máy người dùng cuối nếu ứng dụng tự khởi tạo database và không yêu cầu người dùng quản trị SQL.
 
 ### 13.2. Publish ứng dụng
 
@@ -1058,26 +839,27 @@ Dùng Inno Setup để tạo `HotelManagement_Setup.exe`:
 
 - Copy toàn bộ nội dung `artifacts/publish` vào thư mục cài đặt, ví dụ `{autopf}\HotelManagement`.
 - Tạo shortcut Start Menu/Desktop nếu người dùng chọn.
-- Các SQL scripts đã được nhúng trong `HotelManagement.Infrastructure`; không bắt buộc copy ra file ngoài khi chạy.
-- Không ghi Database đang hoạt động vào `Program Files`; dữ liệu runtime lưu tại `%LOCALAPPDATA%\HotelManagement\Data`.
-- Khi chạy lần đầu, ứng dụng mở SQLite ở chế độ `ReadWriteCreate`, sau đó `DbInitializer` tạo bảng, index và seed data.
-- Không đóng gói file SQLite đang chứa dữ liệu phát triển cá nhân. Nếu cần dữ liệu demo, khởi tạo từ script seed dùng chung.
+- Đưa script SQL khởi tạo vào thư mục dữ liệu hoặc resource phù hợp.
+- Không ghi database đang hoạt động vào `Program Files`; dữ liệu runtime nên lưu tại thư mục dữ liệu người dùng, ví dụ `%LOCALAPPDATA%\HotelManagement\Data`.
+- Kiểm tra LocalDB đã được cài. Nếu chưa, hiển thị hướng dẫn cài LocalDB hoặc tích hợp bộ cài LocalDB riêng theo điều kiện phân phối của Microsoft.
+- Khi chạy lần đầu, ứng dụng kiểm tra database; nếu chưa có thì tạo database, tạo bảng và nạp dữ liệu khởi tạo.
 
-**Phân biệt hai thành phần:**
+**Phân biệt hai gói:**
 
 1. `HotelManagement_Setup.exe`: bộ cài ứng dụng do nhóm tạo.
-2. `HotelManagementDb.sqlite`: file dữ liệu được ứng dụng tạo và sử dụng tại máy người dùng; không phải Database Server hay dịch vụ Windows.
+2. `SQL Server Express LocalDB`: thành phần Database Engine cần có riêng hoặc được đóng gói như prerequisite. Không được quảng bá rằng file Setup đã bao gồm SQL Server nếu nhóm chưa thực sự tích hợp bộ cài và kiểm thử phần đó.
 
 ### 13.4. Kiểm thử trên máy sạch
 
 Trước khi nộp, thử trên máy ảo hoặc máy Windows khác:
 
 1. Chưa có source code và chưa có Rider.
-2. Chạy `HotelManagement_Setup.exe`.
-3. Mở ứng dụng; kiểm tra thư mục `%LOCALAPPDATA%\HotelManagement\Data` và xác nhận Database tự khởi tạo.
-4. Thử tạo khách, đặt phòng, check-in, ghi dịch vụ, checkout, thanh toán và in mô phỏng.
-5. Đóng và mở lại ứng dụng; xác nhận dữ liệu còn.
-6. Ngắt Internet/Wi-Fi; xác nhận toàn bộ chức năng vẫn hoạt động.
+2. Cài LocalDB theo cách nhóm đã hướng dẫn.
+3. Chạy `HotelManagement_Setup.exe`.
+4. Mở ứng dụng; kiểm tra database tự khởi tạo.
+5. Thử tạo khách, đặt phòng, check-in, ghi dịch vụ, checkout, thanh toán, in mô phỏng.
+6. Đóng và mở lại ứng dụng; xác nhận dữ liệu còn.
+7. Ngắt Internet/Wi-Fi; xác nhận toàn bộ chức năng vẫn hoạt động.
 
 ---
 
@@ -1086,7 +868,7 @@ Trước khi nộp, thử trên máy ảo hoặc máy Windows khác:
 | Giai đoạn | Công việc | Kết quả cần có |
 |---|---|---|
 | 1. Chốt nền | Thống nhất Entity, enum, quy tắc trạng thái, công thức tính tiền, connection string, cấu trúc solution | Tài liệu Entity và project spec được nhóm xác nhận; solution build được. |
-| 2. CSDL và khung giao diện | Tạo database scripts, Repository nền, MainForm, điều hướng, component chung và khung 19 màn hình S01–S19 | Mở được WinForms, khởi tạo và kết nối file SQLite cục bộ, điều hướng được đến các màn hình đã tạo. |
+| 2. CSDL và khung giao diện | Tạo database scripts, Repository nền, MainForm, điều hướng, component chung và khung 20 màn hình S01–S20 | Mở được WinForms, kết nối LocalDB, điều hướng được đến các màn hình đã tạo. |
 | 3. Danh mục và đặt phòng | Quản lý phòng/loại/tầng/dịch vụ; khách hàng; đặt phòng | CRUD và kiểm tra khả dụng hoạt động. |
 | 4. Check-in và dịch vụ | Nhận phòng, chuyển trạng thái, ghi nhận dịch vụ | Tạo Stay và thêm dịch vụ chính xác. |
 | 5. Check-out và báo cáo | Tính tiền, cọc, hóa đơn, thanh toán/in mô phỏng, báo cáo tháng | Hoàn tất vòng đời một lượt lưu trú và số liệu báo cáo. |
@@ -1096,15 +878,14 @@ Trước khi nộp, thử trên máy ảo hoặc máy Windows khác:
 
 ## 15. Các quyết định cần ghi nhớ
 
-1. Đây là **ứng dụng WinForms offline**, có đủ 19 màn hình nghiệp vụ S01–S19 theo mục 5.2.
-2. Dữ liệu chính được lưu trong file SQLite cục bộ; không dùng dữ liệu giả trong bộ nhớ làm nơi lưu chính khi đã hoàn tất tích hợp Service/Repository.
-3. Dùng ADO.NET `Microsoft.Data.Sqlite` kết hợp POCO Entity; không dùng Entity Framework Core trong phiên bản hiện tại.
-4. Mọi Form gọi Service; Service gọi Repository; Repository thao tác SQLite. Tất cả SQL có tham số.
-5. Các thao tác khách hàng do lễ tân nhập; không làm cổng khách hàng.
-6. Thanh toán và in là mô phỏng, nhưng phải lưu trạng thái/kết quả trong Database.
-7. Phòng chỉ trở lại `Available` sau khi hoàn tất dọn phòng và không còn đặt trước gán vào phòng; nếu còn đặt trước thì trạng thái là `Reserved`.
-8. Thành viên không tự ý đổi Entity, enum, công thức nghiệp vụ, tên cột hoặc hợp đồng Service đã thống nhất.
-9. File SQLite runtime nằm trong `%LOCALAPPDATA%` và không commit lên Git. Chỉ commit schema scripts, Entity, Repository, Service và cấu hình không chứa bí mật.
+1. Đây là **ứng dụng WinForms offline**, có đủ 20 màn hình nghiệp vụ S01–S20 theo mục 5.2.
+2. Dữ liệu lưu trong SQL Server cục bộ; không dùng dữ liệu giả trong bộ nhớ làm nơi lưu chính.
+3. Dùng ADO.NET `Microsoft.Data.SqlClient`; tất cả SQL có tham số.
+4. Các thao tác khách hàng do lễ tân nhập; không làm cổng khách hàng.
+5. Thanh toán và in là mô phỏng, nhưng phải lưu trạng thái/kết quả trong database.
+6. Phòng chỉ trở lại `AVAILABLE` sau khi hoàn tất dọn phòng và không còn đặt trước gán vào phòng; nếu còn đặt trước thì trạng thái là `RESERVED`.
+7. Thành viên không tự ý đổi Entity, enum, công thức nghiệp vụ hoặc hợp đồng Service đã thống nhất.
+8. Installer ứng dụng và Database Engine là hai thành phần khác nhau; phải kiểm thử prerequisite LocalDB trên máy cài mới.
 
 ---
 
@@ -1112,9 +893,8 @@ Trước khi nộp, thử trên máy ảo hoặc máy Windows khác:
 
 - Microsoft – Target frameworks: <https://learn.microsoft.com/en-us/dotnet/standard/frameworks> (WinForms dùng TFM nền tảng Windows như `net10.0-windows`).
 - Microsoft – .NET application publishing: <https://learn.microsoft.com/en-us/dotnet/core/deploying> (framework-dependent và self-contained deployment).
-- Microsoft – Microsoft.Data.Sqlite overview: <https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/> (ADO.NET provider cho SQLite).
-- Microsoft – Microsoft.Data.Sqlite connection strings: <https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/connection-strings> (Data Source, ReadWriteCreate, Foreign Keys và connection string builder).
-- Microsoft – SQLite data types: <https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/types> (ánh xạ kiểu dữ liệu SQLite và .NET).
+- Microsoft – SQL Server Express LocalDB: <https://learn.microsoft.com/en-us/sql/database-engine/configure-windows/sql-server-express-localdb> (cài đặt, instance và kết nối LocalDB).
+- Microsoft – Microsoft.Data.SqlClient: <https://learn.microsoft.com/en-us/sql/connect/ado-net/microsoft-ado-net-sql-server> (ADO.NET Provider cho SQL Server).
 - JetBrains – Windows Forms Designer: <https://www.jetbrains.com/help/rider/Working_with_Windows_Forms.html>.
 - JetBrains – Rider 2024.3: <https://www.jetbrains.com/rider/whatsnew/2024-3/> (bổ sung WinForms Designer cho dự án .NET 6+).
 
