@@ -94,7 +94,7 @@ internal static class Program
             // Đăng kí trang S15
             mainForm.RegisterPage(
                 "S15",
-                _ => new ServiceUsageView(mainForm.NavigateToScreen)
+                _ => new ServiceUsageView(mainForm.NavigateToScreen, hotelServiceService)
             );
             // Đăng kí trang S17
             mainForm.RegisterPage(

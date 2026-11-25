@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using HotelManagement.Core.Entities;
+using HotelManagement.Core.Enums;
+using HotelManagement.Core.Services;
 
 namespace HotelManagement.WinForms.Forms.Services;
 
@@ -11,7 +14,9 @@ namespace HotelManagement.WinForms.Forms.Services;
 public sealed class ServiceUsageView : UserControl
 {
     private readonly Action<string, object?> navigate;
-    private readonly List<ServiceItem> services;
+    private List<ServiceItem> services;
+    private readonly HotelServiceService ServiceCatalog;
+
     // Các thành phần giao diện
     private readonly TextBox SearchBox = new();
     private readonly ComboBox ServiceBox = new();
@@ -36,10 +41,10 @@ public sealed class ServiceUsageView : UserControl
     };
     private ServiceItem? selectedService;
 
-    public ServiceUsageView(Action<string, object?> navigate)
+    public ServiceUsageView(Action<string, object?> navigate, HotelServiceService serviceServiceCatalog)
     {
         this.navigate = navigate ?? throw new ArgumentNullException(nameof(navigate));
-        services = LoadServices();
+        ServiceCatalog = serviceServiceCatalog ?? throw new ArgumentNullException(nameof(serviceServiceCatalog));
         Dock = DockStyle.Fill;
         Padding = new Padding(12);
         AutoScroll = true;
@@ -65,8 +70,32 @@ public sealed class ServiceUsageView : UserControl
         layout.Controls.Add(BuildArea(), 0, 4);
         Controls.Add(layout);
         Filter();
+        LoadServices();
         RefreshData();
     }
+
+    private void LoadServices()
+    {
+        IReadOnlyList<HotelService> entities = ServiceCatalog.GetAll(includeInactive: true);
+        services = entities.Select(s => new ServiceUsageView.ServiceItem(
+            s.ServiceId,
+            s.ServiceCode,
+            s.ServiceName,
+            ToCategoryText(s.Category),
+            s.UnitName,
+            s.UnitPrice,
+            s.Description,
+            s.IsActive
+        )).ToList();
+    }
+private static string ToCategoryText(ServiceCategory category) => category switch
+{
+    ServiceCategory.FoodDrink => "Đồ uống",
+    ServiceCategory.Laundry => "Giặt ủi",
+    ServiceCategory.Transport => "Thuê xe",
+    _ => "Khác"
+};
+
     private Control BuildHeader()
     {
         var panel = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
@@ -248,13 +277,6 @@ public sealed class ServiceUsageView : UserControl
         var total = selectedService.UnitPrice * quantityInput.Value;
         totalAmountLabel.Text = $"Tổng tiền: {total:N0}đ";
     }
-    private List<ServiceItem> LoadServices() => new()
-    {
-        new(1, "NC01", "Nước khoáng Lavie 500ml", "Đồ uống", "Chai", 10000, "Nước suối đóng chai", true),
-        new(2, "NC02", "Bia Heineken 330ml", "Đồ uống", "Lon", 25000, "Đồ uống có cồn", true),
-        new(3, "GU01", "Giặt ủi cao cấp", "Giặt ủi", "Chiếc", 100000, "Dịch vụ giặt nhanh", true),
-        new(4, "TH01", "Thuê xe Vinfast", "Thuê xe", "Ngày", 890000, "Xe điện đời mới", false)
-    };
     private sealed record ServiceItem(
         int ServiceId,
         string ServiceCode,

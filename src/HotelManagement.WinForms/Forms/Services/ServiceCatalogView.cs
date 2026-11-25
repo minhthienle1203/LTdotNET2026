@@ -63,11 +63,11 @@ public sealed class ServiceCatalogView : UserControl
         layout.Controls.Add(BuildArea(), 0, 4);
         Controls.Add(layout);
         Filter();
-        LoadService();
+        LoadServices();
         RefreshData();
     }
 
-    private void LoadService()
+    private void LoadServices()
     {
         IReadOnlyList<HotelService> entities = ServiceCatalog.GetAll(includeInactive: true);
         services = entities.Select(s => new ServiceItem(
