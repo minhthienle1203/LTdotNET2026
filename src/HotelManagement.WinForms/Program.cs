@@ -8,6 +8,7 @@ using HotelManagement.WinForms.Forms.Dashboard;
 using HotelManagement.WinForms.Forms.Housekeeping;
 using HotelManagement.WinForms.Forms.Invoices;
 using HotelManagement.WinForms.Forms.Main;
+using HotelManagement.WinForms.Forms.Reports;
 using HotelManagement.WinForms.Forms.Reservations;
 using HotelManagement.WinForms.Forms.Rooms;
 using HotelManagement.WinForms.Forms.Services;
@@ -105,6 +106,9 @@ internal static class Program
             );
             //đăng kí trang quản lí dọn phòng
             mainForm.RegisterPage("S19", _=> new HousekeepingView(roomService, mainForm.NavigateToScreen));
+
+            //đăng kí trang báo cáo tháng
+            mainForm.RegisterPage("S20", _=> new MonthlyReportView(mainForm.NavigateToScreen));
 
             Application.Run(mainForm);
         }
