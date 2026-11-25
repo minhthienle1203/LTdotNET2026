@@ -1,3 +1,4 @@
+using HotelManagement.Core.DTOs;
 using HotelManagement.Core.Services;
 
 namespace HotelManagement.WinForms.Forms.Housekeeping;
@@ -16,6 +17,7 @@ public class HousekeepingView : UserControl
         Dock = DockStyle.Fill;
         Padding = new Padding(12);
         BuildLayout();
+        LoadCleaningRoom();
     }
 
     private void BuildLayout()
@@ -28,6 +30,7 @@ public class HousekeepingView : UserControl
         top.Controls.Add(new Label {Text = "DỌN PHÒNG", AutoSize = true, Font = new Font("Segoe UI", 13 ,FontStyle.Bold), Margin = new Padding(4)});
         top.Controls.Add(MakeButton("Làm mới", LoadCleaningRoom));
         top.Controls.Add(MakeButton("Xem sơ đồ", () => _navigate("S01", null)));
+        top.Controls.Add(MakeButton("Hoàn tất dọn phòng", CompleteSelected));
         root.Controls.Add(top, 0, 0);
 
         _grid.Dock = DockStyle.Fill;
@@ -42,6 +45,7 @@ public class HousekeepingView : UserControl
         _grid.Columns.Add("Floor", "Tầng");
         _grid.Columns.Add("RoomType", "Loại phòng");
         _grid.Columns.Add("Note", "Ghi chú");
+        _grid.SelectionChanged += (_, _) => ShowSelectedRoom();
         root.Controls.Add(_grid, 0, 1);
         _detail.Dock = DockStyle.Fill;
         _detail.Padding = new Padding(8);
@@ -49,11 +53,57 @@ public class HousekeepingView : UserControl
         root.Controls.Add(_detail, 0, 2);
         Controls.Add(root);
     }
+    private RoomListDto? GetSelected() => _grid.CurrentRow?.Tag as RoomListDto;
+    //xem chi tiết
+    private void ShowSelectedRoom()
+    {
+        var room = GetSelected();
+        _detail.Text = room == null
+            ? "Bạn chưa chọn phòng đang dọn dẹp"
+            : $"Mã phòng:{room.RoomCode}\n Tầng: {room.FloorName} \n Loại phòng: {room.TypeName}\n Trạng thái: Đang dọn \n Ghi chú: {room.Note ?? "Không có"}";
+    }
 
+    private void CompleteSelected()
+    {
+        var room = GetSelected();
+        if (MessageBox.Show(this, $"Xác nhận hoàn tất dọn dẹp {room.RoomCode}?", "Xác nhận"
+                , MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            return;
+        try
+        {
+            _roomService.CompleteCleaning(room.RoomId);
+            MessageBox.Show(this, "Đã cập nhật trạng thái phòng", "Thông báo", MessageBoxButtons.OK);
+            LoadCleaningRoom();
+        }
+        catch (Exception e)
+        {
+            MessageBox.Show(this, e.Message, "Không thể hoàn tất dọn phòng, thử lại sau", MessageBoxButtons.OK);
+            LoadCleaningRoom();
+        }
+    }
+    //load toàn bộ phòng đang dọn
     private void LoadCleaningRoom()
     {
-        throw new NotImplementedException();
+        try
+        {
+            var rooms = _roomService.GetRoomsForCleaning();
+            _grid.Rows.Clear();
+            foreach (var room in rooms)
+            {
+                int index = _grid.Rows.Add(room.RoomCode, $"{room.FloorName}",
+                    $"{room.TypeName}", room.Note ?? "");
+                _grid.Rows[index].Tag = room;
+            }
+
+            ShowSelectedRoom();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this,ex.Message, "Không tải được danh sách phòng",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
+
 
     private static Button MakeButton(string text, Action action)
     {

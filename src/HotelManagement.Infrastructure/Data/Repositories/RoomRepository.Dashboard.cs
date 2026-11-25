@@ -2,7 +2,6 @@ using HotelManagement.Core.DTOs;
 using HotelManagement.Core.Entities;
 using HotelManagement.Core.Enums;
 using HotelManagement.Core.Interfaces;
-using HotelManagement.Infrastructure.Data;
 
 namespace HotelManagement.Infrastructure.Data.Repositories;
 
@@ -112,7 +111,7 @@ public sealed partial class RoomRepository : IRoomRepository
         command.Parameters.AddWithValue("$roomTypeId", (object?)roomTypeId ?? DBNull.Value);
         command.Parameters.AddWithValue("$status", (object?)status?.ToString() ?? DBNull.Value);
         command.Parameters.AddWithValue("$isActive",
-            isActive.HasValue ? (object)(isActive.Value ? 1 : 0) : DBNull.Value);
+            isActive.HasValue ? isActive.Value ? 1 : 0 : DBNull.Value);
         using var reader = command.ExecuteReader();
         while (reader.Read())
         {
@@ -263,5 +262,57 @@ public sealed partial class RoomRepository : IRoomRepository
 
         if (command.ExecuteNonQuery() != 1)
             throw new InvalidOperationException("Lỗi cập nhật phòng, vui lòng thử lại sau!");
+    }
+    // lay danh sach phong dang don dep
+    public List<RoomListDto> GetRoomsForCleaning()
+    {
+        const string sql = @" SELECT r.RoomId, r.RoomCode, r.FloorId, f.FloorNumber, f.FloorName, r.RoomTypeId, rt.TypeCode, rt.TypeName,
+                            r.Status, r.Note, r.IsActive, rt.HourlyRate, rt.DailyRate
+                            FROM  Room r INNER JOIN Floor f ON f.FloorId = r.FloorId
+                                          INNER JOIN RoomType rt ON rt.RoomTypeId = r.RoomTypeId
+                            WHERE r.Status = 'Cleaning' AND r.IsActive = 1
+                            ORDER BY f.SortOrder, f.FloorNumber, r.RoomCode;";
+        var re = new List<RoomListDto>();
+        using var connection = _connectionFactory.CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            re.Add(new RoomListDto
+            {
+                RoomId = reader.GetInt32(0),
+                RoomCode = reader.GetString(1),
+                FloorId = reader.GetInt32(2),
+                FloorNumber = reader.GetInt32(3),
+                FloorName = reader.GetString(4),
+                RoomTypeId = reader.GetInt32(5),
+                TypeCode = reader.GetString(6),
+                TypeName = reader.GetString(7),
+                Status = Enum.Parse<RoomStatus>(reader.GetString(8)),
+                Note = reader.IsDBNull(9) ? null : reader.GetString(9),
+                IsActive = reader.GetInt64(10 )== 1,
+                HourlyRate = SqliteValueConverter.FromVnd(reader,11),
+                DailyRate = SqliteValueConverter.FromVnd(reader,12)
+            });
+        }
+        return re;
+    }
+    // chinh sua trang thai da don dep xong
+    public void CompleteCleaning(int roomId)
+    {
+        const string nextStatus = "Available";
+        const string sql = @" UPDATE Room
+                              SET Status = $nextStatus
+                              WHERE roomId = $roomId AND Status = 'Cleaning' AND IsActive = 1;";
+        using var connection = _connectionFactory.CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        command.Parameters.AddWithValue("$nextStatus", nextStatus);
+        command.Parameters.AddWithValue("$roomId", roomId);
+        if (command.ExecuteNonQuery() != 1)
+            throw new InvalidOperationException("Trạng thái phòng đã thay đổi. Hãy tải lại danh sách");
     }
 }
