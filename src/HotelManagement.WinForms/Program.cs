@@ -47,6 +47,8 @@ internal static class Program
             var roomRepository = new RoomRepository(connectionFactory);
             var floorService = new FloorService(floorRepository);
             var roomService = new RoomService(roomRepository);
+            var hotelServiceRepository = new HotelServiceRepository(connectionFactory);
+            var hotelServiceService = new HotelServiceService(hotelServiceRepository);
             // tạo một MainForm cố định
 
             var mainForm = new MainForm();
@@ -87,12 +89,12 @@ internal static class Program
             // Đăng kí trang S13
             mainForm.RegisterPage(
                 "S13",
-                _ => new ServiceCatalogView(mainForm.NavigateToScreen)
+                _ => new ServiceCatalogView(mainForm.NavigateToScreen, hotelServiceService)
             );
             // Đăng kí trang S15
             mainForm.RegisterPage(
                 "S15",
-                _ => new ServiceUsageView(mainForm.NavigateToScreen)
+                _ => new ServiceUsageView(mainForm.NavigateToScreen, hotelServiceService)
             );
             // Đăng kí trang S17
             mainForm.RegisterPage(
