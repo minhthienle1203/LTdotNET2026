@@ -2,6 +2,7 @@
 using System.Configuration;
 using System.Drawing;
 using HotelManagement.Core.Entities;
+using HotelManagement.Core.Enums;
 using Microsoft.CSharp.RuntimeBinder;
 
 namespace HotelManagement.WinForms.Forms.Customers;
@@ -25,6 +26,7 @@ public sealed class CustomersListView : UserControl
     private readonly Label _lblDomestic = new();
     private readonly Label _lblInternational = new();
     private readonly Label _lblActive = new ();
+    private readonly System.Windows.Forms.Timer _searchTimer = new() { Interval = 300 };
 
     public CustomersListView(Action<String, object?> navigate,
         Func<string, IEnumerable<Customer>> searchCustomers = null)
@@ -38,7 +40,18 @@ public sealed class CustomersListView : UserControl
         MinimumSize = new Size(900, 560);
         BuildLayout();
         configureGird();
-        BindData();
+
+        _bindingSource.DataSource = _customers;
+        _Gird.DataSource = _bindingSource;
+
+        _searchTimer.Tick += (_, _) =>
+        {
+            _searchTimer.Stop();
+            ReloadCustomers();
+        };
+
+        Disposed += (_, _) => _searchTimer.Dispose();
+
         Load += (_, _) => ReloadCustomers();
 
     }
@@ -140,7 +153,7 @@ public sealed class CustomersListView : UserControl
             Margin = new Padding(0, 0, 0, 6),
             Padding = Padding.Empty,
         };
-        for (int i=0; i < 4;i++)  cards.RowStyles.Add(new RowStyle(SizeType.Percent, 25));
+        for (int i = 0; i < 4; i++) cards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
         cards.Controls.Add(CreateStatCard("Tong khach hang",_lblTotal,"Tat ca ho so trong quan ly"),0,0);
         cards.Controls.Add(CreateStatCard("Khach hang noi dia",_lblDomestic,"Giay to cccd"),1,0);
         cards.Controls.Add(CreateStatCard("Khach hang quoc te",_lblInternational,"Ho chieu/giay to"),2,0);
@@ -150,7 +163,7 @@ public sealed class CustomersListView : UserControl
 
     private Control CreateStatCard(string title, Label valueLabel, string note)
     {
-        var card = new FlowLayoutPanel
+        var card = new Panel
         {
             Dock = DockStyle.Fill,
             BackColor = Color.White,
@@ -168,7 +181,7 @@ public sealed class CustomersListView : UserControl
         valueLabel.Text = "0";
         valueLabel.Dock = DockStyle.Top;
         valueLabel.Height = 31;
-        valueLabel.Font = new Font("Arial", 8, FontStyle.Bold);
+        valueLabel.Font = new Font("Arial", 16, FontStyle.Bold);
         valueLabel.ForeColor = Color.FromArgb(27, 77, 151);
         var noteLabel = new Label
         {
@@ -212,7 +225,21 @@ public sealed class CustomersListView : UserControl
         _txtKeywords.Margin = new Padding(3, 3, 8, 3);
         _txtKeywords.Font = new Font("Arial", 9);
         _txtKeywords.PlaceholderText = "Nhap ten, sdt,cccd ho chieu,....";
-        _txtKeywords.TextChanged += (_, _) => ApplySearch();
+        _txtKeywords.TextChanged += (_, _) =>
+        {
+            _searchTimer.Stop();
+            _searchTimer.Start();
+        };
+
+        _txtKeywords.KeyDown += (_, e) =>
+        {
+            if (e.KeyCode != Keys.Enter) return;
+
+            _searchTimer.Stop();
+            ReloadCustomers();
+            e.SuppressKeyPress = true;
+        };
+
         var btnSearch = CreateButton("tim kiem", Color.FromArgb(30, 91, 190));
         btnSearch.Click += (_, _) => ReloadCustomers();
         var btnReset = CreateButton("lam moi", Color.FromArgb(94, 109, 128));
@@ -252,7 +279,7 @@ public sealed class CustomersListView : UserControl
         };
         var listHeader = new Panel
         {
-            Dock = DockStyle.Fill,
+            Dock = DockStyle.Top,
             Height = 34,
             BackColor = Color.White
 
@@ -386,7 +413,7 @@ public sealed class CustomersListView : UserControl
         _Gird.BackgroundColor = Color.White;
         _Gird.BorderStyle=BorderStyle.None;
         _Gird.GridColor = Color.FromArgb(225, 232, 241);
-        _Gird.AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.AllCells;
+        _Gird.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
         _Gird.ColumnHeadersHeight = 38;
         _Gird.RowTemplate.Height = 38;
         _Gird.EnableHeadersVisualStyles = false;
