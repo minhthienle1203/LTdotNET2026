@@ -26,5 +26,8 @@
     <Compile Update="Forms\Invoices\InvoiceListView.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Update="Forms\CheckOut\CheckOutView.cs">
+      <SubType>Form</SubType>
+    </Compile>
   </ItemGroup>
 </Project>

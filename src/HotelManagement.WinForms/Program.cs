@@ -12,6 +12,7 @@ using HotelManagement.WinForms.Forms.Reports;
 using HotelManagement.WinForms.Forms.Reservations;
 using HotelManagement.WinForms.Forms.Rooms;
 using HotelManagement.WinForms.Forms.Services;
+using HotelManagement.WinForms.Forms.Stays;
 
 namespace HotelManagement.WinForms;
 
@@ -89,17 +90,22 @@ internal static class Program
             );
 
 
-            // Đăng kí trang S13
+            // Đăng kí trang dichj vụ
             mainForm.RegisterPage(
                 "S13",
                 _ => new ServiceCatalogView(mainForm.NavigateToScreen, hotelServiceService)
             );
-            // Đăng kí trang S15
+            // Đăng kí trang ghi nhận dịch vụ
             mainForm.RegisterPage(
                 "S15",
                 _ => new ServiceUsageView(mainForm.NavigateToScreen, hotelServiceService)
             );
-            // Đăng kí trang S17
+            // Đăng kí trang checkout
+            mainForm.RegisterPage(
+                "S16",
+                _ => new CheckOutView(mainForm.NavigateToScreen)
+            );
+            // Đăng kí trang hóa đơn
             mainForm.RegisterPage(
                 "S17",
                 _ => new InvoiceListView(mainForm.NavigateToScreen, invoiceService)
