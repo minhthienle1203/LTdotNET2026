@@ -355,5 +355,176 @@ public sealed class ActiveStaysView : UserControl
         ShowDetail();
     }
 
+    private ActiveStayDto? Selected => _visible.FirstOrDefault(s => s.StayId == _selectedId);
 
+    private void ShowDetail()
+    {
+        var stay = Selected;
+        _btnService.Enabled = _btnCheckout.Enabled = stay is not null;
+        _btnService.BackColor = stay is null ? Color.Silver : Navy;
+        _btnCheckout.BackColor = stay is null ? Color.Silver : Blue;
+        _lstServices.Items.Clear();
+
+        if (stay is null || _data is null)
+        {
+            _lblRoom.Text = "—";
+            _lblStay.Text = "Chưa chọn lượt lưu trú.";
+            _lblMoney.Text = _lblDue.Text = "";
+            return;
+        }
+
+        var now = _data.LoadedAt;
+        _lblRoom.Text = $"P.{stay.RoomCode}";
+        _lblStay.Text = string.Join(Environment.NewLine,
+            $"{stay.TypeName} • {stay.FloorName} • Lượt #{stay.StayId} • InProgress",
+            $"Khách: {stay.CustomerName}",
+            $"{stay.IdentityType}: {stay.IdentityNumber}    SĐT: {stay.Phone}",
+            $"Nguồn: {stay.ReservationCode ?? "Khách vãng lai"}    Số khách: {stay.GuestCount}",
+            $"Check-in: {stay.ActualCheckIn:dd/MM/yyyy HH:mm}",
+            $"Dự kiến trả: {stay.ExpectedCheckOut:dd/MM/yyyy HH:mm}" +
+                (ActiveStayService.IsOverdue(stay, now) ? "  (QUÁ HẠN)" : ""),
+            $"Ghi chú: {stay.Note ?? "—"}");
+        _lblStay.UseMnemonic = false;
+
+        foreach (var line in _data.Services.Where(x => x.StayId == stay.StayId))
+        {
+            var item = new ListViewItem(line.ServiceName)
+            {
+                ToolTipText = $"{line.UsedAt:dd/MM HH:mm} – đơn giá {Money(line.UnitPrice)}"
+            };
+            item.SubItems.Add($"{line.Quantity.ToString("0.###", Vi)} {line.UnitName}");
+            item.SubItems.Add(Money(line.Amount));
+            _lstServices.Items.Add(item);
+        }
+        _lstServices.ShowItemToolTips = true;
+        if (_lstServices.Items.Count == 0) _lstServices.Items.Add("Chưa dùng dịch vụ");
+
+        var basis = _rdoDay.Checked ? ChargeBasis.Day : ChargeBasis.Hour;
+        var e = ActiveStayService.Estimate(stay, basis, now);
+        _lblMoney.Text = string.Join(Environment.NewLine,
+            $"Tiền phòng: {e.Units} {(basis == ChargeBasis.Day ? "ngày" : "giờ")} × {Money(e.Rate)} = {Money(e.RoomCharge)}",
+            $"Tiền dịch vụ: {Money(e.ServiceCharge)}",
+            $"Tổng trước cọc: {Money(e.SubTotal)}",
+            $"Tiền cọc: {Money(e.Deposit)}");
+        _lblDue.Text = e.RefundDue > 0
+            ? $"Tạm tính cần hoàn: {Money(e.RefundDue)}"
+            : $"Cần thanh toán tạm tính: {Money(e.AmountDue)}";
+    }
+
+    private void OpenForSelected(Action<int>? handler, string screen)
+    {
+        if (Selected is not { } stay) return;
+        var stayId = stay.StayId;
+        _selectedId = stayId;
+        Reload(showError: true);
+        if (_data?.Stays.Any(s => s.StayId == stayId) != true)
+        {
+            MessageBox.Show(this, "Lượt lưu trú này không còn ở trạng thái InProgress.", "Thông báo");
+            return;
+        }
+
+        if (handler is null)
+        {
+            MessageBox.Show(this, $"Form chính chưa gắn màn hình {screen}. StayId = {stayId}.", "Chưa kết nối");
+            return;
+        }
+        handler(stayId);
+        if (!IsDisposed) RefreshData();
+    }
+
+    private void Export()
+    {
+        if (_data is null || _visible.Count == 0)
+        {
+            MessageBox.Show(this, "Không có dữ liệu để xuất.", "Xuất CSV");
+            return;
+        }
+        var rows = _visible.ToList();
+        var now = _data.LoadedAt;
+        using var dialog = new SaveFileDialog
+        {
+            Filter = "CSV (*.csv)|*.csv", FileName = $"LuuTru_{now:yyyyMMdd_HHmm}.csv"
+        };
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+
+        try
+        {
+            var separator = CultureInfo.CurrentCulture.TextInfo.ListSeparator;
+            string Cell(string value)
+            {
+                if (value.Length > 0 && "=+-@\t\r".IndexOf(value[0]) >= 0) value = "'" + value;
+                return "\"" + value.Replace("\"", "\"\"") + "\"";
+            }
+            var text = new StringBuilder();
+            text.AppendLine(string.Join(separator, new[]
+            {
+                "Phòng", "Hạng", "Khách", "Giấy tờ", "Điện thoại", "Check-in", "Dự kiến trả",
+                "Quá hạn", "Số khách", "Tiền dịch vụ", "Tiền cọc"
+            }.Select(Cell)));
+            foreach (var s in rows)
+                text.AppendLine(string.Join(separator, new[]
+                {
+                    s.RoomCode, s.TypeName, s.CustomerName,
+                    $"{s.IdentityType} {s.IdentityNumber}", "'" + s.Phone,
+                    s.ActualCheckIn.ToString("dd/MM/yyyy HH:mm"), s.ExpectedCheckOut.ToString("dd/MM/yyyy HH:mm"),
+                    ActiveStayService.IsOverdue(s, now) ? "Có" : "Không",
+                    s.GuestCount.ToString(), s.ServiceTotal.ToString("0"), s.DepositAmount.ToString("0")
+                }.Select(Cell)));
+            File.WriteAllText(dialog.FileName, text.ToString(), new UTF8Encoding(true));
+            MessageBox.Show(this, $"Đã xuất {rows.Count} dòng.", "Xuất CSV");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            MessageBox.Show(this, "Không ghi được file (có thể đang mở trong Excel):\n" + ex.Message, "Lỗi");
+        }
+    }
+
+    private void Silently(Action action)
+    {
+        var previous = _loading;
+        _loading = true;
+        try { action(); }
+        finally { _loading = previous; }
+    }
+
+    private static string Money(decimal value) => value.ToString("N0", Vi) + " đ";
+    private static Font Bold(float size) => new("Segoe UI", size, FontStyle.Bold);
+    private static Label Info() => new() { AutoSize = true, MaximumSize = new Size(350, 0), Margin = new Padding(3, 4, 3, 8) };
+    private static Label Caption(string text) => new() { Text = text, AutoSize = true, Margin = new Padding(8, 7, 2, 0) };
+    private static Label KpiValue() => new() { AutoSize = true, Font = Bold(15), ForeColor = Navy };
+    private static Label KpiNote() => new() { AutoSize = true, ForeColor = Color.DimGray };
+    private static ComboBox Combo(int width) => new() { Width = width, DropDownStyle = ComboBoxStyle.DropDownList };
+
+    private static FlowLayoutPanel Kpi(string title, Label value, Label note)
+    {
+        var card = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false,
+            BackColor = Color.White, Margin = new Padding(3), Padding = new Padding(8, 6, 4, 4)
+        };
+        card.Controls.AddRange(new Control[]
+        {
+            new Label { Text = title, AutoSize = true, Font = Bold(8.5f) }, value, note
+        });
+        return card;
+    }
+
+    private static FlowLayoutPanel Flow(params Control[] controls)
+    {
+        var panel = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Top, Margin = new Padding(0) };
+        panel.Controls.AddRange(controls);
+        return panel;
+    }
+
+    private static Button SmallButton(string text, Color back, Color fore) => new()
+    {
+        Text = text, AutoSize = true, MinimumSize = new Size(90, 30), BackColor = back, ForeColor = fore,
+        FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand, UseVisualStyleBackColor = false
+    };
+
+    private static Button BigButton(string text, Color back) => new()
+    {
+        Text = text, Size = new Size(350, 40), BackColor = back, ForeColor = Color.White, Font = Bold(9.5f),
+        FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand, UseVisualStyleBackColor = false
+    };
 }
