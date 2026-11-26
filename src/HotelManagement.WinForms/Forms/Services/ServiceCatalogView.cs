@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using HotelManagement.Core.Services;
+using HotelManagement.Core.Enums;
+using HotelManagement.Core.Entities;
 
 namespace HotelManagement.WinForms.Forms.Services;
 
@@ -11,7 +14,10 @@ namespace HotelManagement.WinForms.Forms.Services;
 public sealed class ServiceCatalogView : UserControl
 {
     private readonly Action<string, object?> navigate;
-    private readonly List<ServiceItem> services;
+    private readonly HotelServiceService ServiceCatalog;
+
+    private  List<ServiceItem> services;
+
     // Các thành phần giao diện
     private readonly TextBox SearchBox = new();
     private readonly ComboBox ServiceBox = new();
@@ -21,12 +27,17 @@ public sealed class ServiceCatalogView : UserControl
     private readonly Label serviceCount = new();
     private readonly Label serviceDetails = new();
     private readonly FlowLayoutPanel serviceActions = new();
+    private static readonly string[] Stat =
+    {
+        "TỔNG DỊCH VỤ",
+        "ĐANG CUNG CẤP",
+        "NGỪNG CUNG CẤP"
+    };
     private ServiceItem? selectedService;
-
-    public ServiceCatalogView(Action<string, object?> navigate)
+    public ServiceCatalogView(Action<string, object?> navigate, HotelServiceService serviceServiceCatalog)
     {
         this.navigate = navigate ?? throw new ArgumentNullException(nameof(navigate));
-        services = LoadServices();
+        ServiceCatalog = serviceServiceCatalog ?? throw new ArgumentNullException(nameof(serviceServiceCatalog));
         Dock = DockStyle.Fill;
         Padding = new Padding(12);
         AutoScroll = true;
@@ -47,11 +58,36 @@ public sealed class ServiceCatalogView : UserControl
         layout.Controls.Add(BuildThongKe(), 0, 1);
         layout.Controls.Add(BuildFilters(), 0, 2);
         layout.Controls.Add(serviceCount, 0, 3);
+        serviceCount.Dock = DockStyle.Fill;
+        serviceCount.TextAlign = ContentAlignment.MiddleLeft;
         layout.Controls.Add(BuildArea(), 0, 4);
         Controls.Add(layout);
         Filter();
+        LoadServices();
         RefreshData();
     }
+
+    private void LoadServices()
+    {
+        IReadOnlyList<HotelService> entities = ServiceCatalog.GetAll(includeInactive: true);
+        services = entities.Select(s => new ServiceItem(
+            s.ServiceId,
+            s.ServiceCode,
+            s.ServiceName,
+            ToCategoryText(s.Category),
+            s.UnitName,
+            s.UnitPrice,
+            s.Description,
+            s.IsActive
+        )).ToList();
+    }
+    private static string ToCategoryText(ServiceCategory category) => category switch
+    {
+        ServiceCategory.FoodDrink => "Đồ uống",
+        ServiceCategory.Laundry => "Giặt ủi",
+        ServiceCategory.Transport => "Thuê xe",
+        _ => "Khác"
+    };
     private Control BuildHeader()
     {
         var panel = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
@@ -60,53 +96,49 @@ public sealed class ServiceCatalogView : UserControl
             Text = "DANH MỤC DỊCH VỤ HỆ THỐNG",
             AutoSize = true,
             Font = new Font("Segoe UI", 15, FontStyle.Bold),
-            Margin = new Padding(0, 5, 16, 0)
         });
         return panel;
     }
+
     //  Các ô thoongs kê
     private Control BuildThongKe()
     {
-        var panel = ThongKePanel;
-        panel.Dock = DockStyle.Fill;
-        panel.ColumnCount = 3;
-        panel.RowCount = 1;
-        panel.ColumnStyles.Clear();
-        for (var i = 0; i < 3; i++)
-            panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
-        string[] titles = { "Tổng dịch vụ", "Đang cung cấp", "Ngừng cung cấp" };
-        panel.Controls.Clear();
-        for (var i = 0; i < titles.Length; i++)
+        ThongKePanel.Dock = DockStyle.Fill;
+        ThongKePanel.ColumnCount = Stat.Length;
+        ThongKePanel.RowCount = 1;
+        for (var i = 0; i < Stat.Length; i++)
         {
+            ThongKePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / Stat.Length));
             var item = new Label
             {
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleCenter,
                 BorderStyle = BorderStyle.FixedSingle,
-                Text = titles[i] + "\n0",
                 Margin = new Padding(2),
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
-                BackColor = Color.White
             };
-            panel.Controls.Add(item, i, 0);
+            ThongKePanel.Controls.Add(item, i, 0);
         }
-        return panel;
+
+        return ThongKePanel;
     }
+
     private Control BuildFilters()
     {
         var panel = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
-        panel.Controls.Add(new Label { Text = "Tìm kiếm:", AutoSize = true, Margin = new Padding(0, 8, 5, 0) });
-        SearchBox.Width = 160;
+        panel.Controls.Add(new Label { Text = "Tìm Kiếm:", AutoSize = true, Margin = new Padding(0, 8, 5, 0) });
+        SearchBox.Width = 300;
         SearchBox.TextChanged += (_, _) => RefreshData();
         panel.Controls.Add(SearchBox);
-        panel.Controls.Add(new Label { Text = "Nhóm:", AutoSize = true, Margin = new Padding(12, 8, 5, 0) });
-        ServiceBox.Width = 150;
+        panel.Controls.Add(new Label { Text = "Nhóm:", AutoSize = true, Margin = new Padding(75, 8, 5, 0) });
+        ServiceBox.Width = 140;
         panel.Controls.Add(ServiceBox);
-        panel.Controls.Add(new Label { Text = "Trạng thái:", AutoSize = true, Margin = new Padding(12, 8, 5, 0) });
-        StatusBox.Width = 150;
+        panel.Controls.Add(new Label { Text = "Trạng Thái:", AutoSize = true, Margin = new Padding(150, 8, 5, 0) });
+        StatusBox.Width = 175;
         panel.Controls.Add(StatusBox);
         return panel;
     }
+
     private Control BuildArea()
     {
         var panel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1 };
@@ -121,7 +153,8 @@ public sealed class ServiceCatalogView : UserControl
         serviceGrid.SelectionChanged += (_, _) => ServiceSelected();
         panel.Controls.Add(serviceGrid, 0, 0);
         // Phần thông tin
-        var detailsPanel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 1, Padding = new Padding(8) };
+        var detailsPanel = new TableLayoutPanel
+            { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 1, Padding = new Padding(8) };
         detailsPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         serviceDetails.Dock = DockStyle.Fill;
         serviceDetails.Font = new Font("Segoe UI", 9.5f);
@@ -130,6 +163,7 @@ public sealed class ServiceCatalogView : UserControl
         panel.Controls.Add(detailsPanel, 1, 0);
         return panel;
     }
+
     private void Filter()
     {
         ServiceBox.Items.Add("Tất cả nhóm");
@@ -141,46 +175,50 @@ public sealed class ServiceCatalogView : UserControl
         ServiceBox.SelectedIndexChanged += (_, _) => RefreshData();
         StatusBox.SelectedIndexChanged += (_, _) => RefreshData();
         // Các cột
+        serviceGrid.ColumnHeadersDefaultCellStyle.Font =
+            new Font(serviceGrid.Font, FontStyle.Bold);
         serviceGrid.AutoGenerateColumns = false;
-        serviceGrid.Columns.Clear();
-        serviceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "ServiceCode", HeaderText = "Mã DV" });
-        serviceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "ServiceName", HeaderText = "Tên dịch vụ" });
-        serviceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "CategoryText", HeaderText = "Nhóm" });
-        serviceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "UnitName", HeaderText = "ĐVT" });
-        serviceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "UnitPrice", HeaderText = "Đơn giá" });
-        serviceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "StatusText", HeaderText = "Trạng thái" });
+        serviceGrid.Columns.Add(new DataGridViewTextBoxColumn
+            { DataPropertyName = "ServiceCode", HeaderText = "Mã Dịch Vụ" });
+        serviceGrid.Columns.Add(new DataGridViewTextBoxColumn
+            { DataPropertyName = "ServiceName", HeaderText = "Tên Dịch Vụ" });
+        serviceGrid.Columns.Add(new DataGridViewTextBoxColumn
+            { DataPropertyName = "CategoryText", HeaderText = "Nhóm Dịch Vụ" });
+        serviceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "UnitName", HeaderText = "Đơn Vị" });
+        serviceGrid.Columns.Add(new DataGridViewTextBoxColumn
+            { DataPropertyName = "UnitPriceDisplay", HeaderText = "Đơn Giá" });
+        serviceGrid.Columns.Add(new DataGridViewTextBoxColumn
+            { DataPropertyName = "StatusText", HeaderText = "Trạng Thái" });
     }
+
     private void RefreshData()
     {
         var keyword = SearchBox.Text.Trim().ToLower();
         var catText = ServiceBox.SelectedItem?.ToString() ?? "Tất cả nhóm";
         var statText = StatusBox.SelectedItem?.ToString() ?? "Tất cả trạng thái";
         var filtered = services.Where(s =>
-            (string.IsNullOrEmpty(keyword) || s.ServiceCode.ToLower().Contains(keyword) || s.ServiceName.ToLower().Contains(keyword)) &&
+            (string.IsNullOrEmpty(keyword) || s.ServiceCode.ToLower().Contains(keyword) ||
+             s.ServiceName.ToLower().Contains(keyword)) &&
             (catText == "Tất cả nhóm" || s.CategoryText == catText) &&
             (statText == "Tất cả trạng thái" || s.StatusText == statText)
         ).ToList();
         serviceGrid.DataSource = filtered;
-        serviceCount.Text = $"Danh sách dịch vụ ({filtered.Count}/{services.Count} bản ghi)";
+        serviceCount.Text = $"Danh sách dịch vụ (Hiển thị {filtered.Count}/{services.Count})";
         UpdateThongKe();
     }
+
     private void UpdateThongKe()
     {
-        var panel = ThongKePanel;
-        var names = new[] { "Tổng dịch vụ", "Đang cung cấp", "Ngừng cung cấp" };
         var counts = new[]
         {
             services.Count,
             services.Count(s => s.IsActive),
             services.Count(s => !s.IsActive)
         };
-
-        for (var i = 0; i < counts.Length; i++)
+        for (var i = 0; i < Stat.Length && i < ThongKePanel.Controls.Count; i++)
         {
-            if (panel.Controls[i] is Label lbl)
-            {
-                lbl.Text = $"{names[i]}\n{counts[i]}";
-            }
+            if (ThongKePanel.Controls[i] is Label lbl)
+                lbl.Text = $"{Stat[i]}\n{counts[i]}";
         }
     }
 
@@ -195,11 +233,10 @@ public sealed class ServiceCatalogView : UserControl
             SelectService(null);
         }
     }
+
     private void SelectService(ServiceItem? service)
     {
         selectedService = service;
-        serviceActions.Controls.Clear();
-
         if (service == null)
         {
             serviceDetails.Text = "Chọn một dịch vụ từ danh sách để xem chi tiết.";
@@ -212,23 +249,19 @@ public sealed class ServiceCatalogView : UserControl
             $"Tên dịch vụ: {service.ServiceName}\n" +
             $"Nhóm dịch vụ: {service.CategoryText}\n" +
             $"Đơn vị tính: {service.UnitName}\n" +
-            $"Đơn giá hiện hành: {service.UnitPrice:N0} đ\n" +
+            $"Đơn giá hiện hành: {service.UnitPriceDisplay}\n" +
             $"Trạng thái: {service.StatusText}\n" +
             $"Mô tả: {service.Description ?? "(Không có mô tả)"}";
     }
-    private List<ServiceItem> LoadServices() => new()
-    {
-        new(1, "NC01", "Nước khoáng Lavie 500ml", "Đồ uống", "Chai", 10000, "Nước suối đóng chai", true),
-        new(2, "NC02", "Bia Heineken 330ml", "Đồ uống", "Lon", 25000, "Đồ uống có cồn", true),
-        new(3, "GU01", "Giặt ủi cao cấp", "Giặt ủi", "Chiếc", 100000, "Dịch vụ giặt nhanh", true),
-        new(4, "TH01", "Thuê xe Vinfast", "Thuê xe", "Ngày", 890000, "Xe điện đời mới", false)
-    };
+
+
     private static Button CreateButton(string text, Action onClick)
     {
         var button = new Button { Text = text, AutoSize = true, Margin = new Padding(3) };
         button.Click += (_, _) => onClick();
         return button;
     }
+
     private sealed record ServiceItem(
         int ServiceId,
         string ServiceCode,
@@ -240,20 +273,6 @@ public sealed class ServiceCatalogView : UserControl
         bool IsActive)
     {
         public string StatusText => IsActive ? "Đang cung cấp" : "Ngừng cung cấp";
-        public string UnitPriceDisplay => UnitPrice.ToString("N0") + " đ";
-    }
-
-    /// <summary>
-    /// Required method for Designer support - do not modify
-    /// the contents of this method with the code editor.
-    /// </summary>
-    private void InitializeComponent()
-    {
-        SuspendLayout();
-        //
-        // ServiceCatalogView
-        //
-        Size = new System.Drawing.Size(561, 654);
-        ResumeLayout(false);
+        public string UnitPriceDisplay => UnitPrice.ToString("N0") + "đ";
     }
 }
