@@ -53,6 +53,8 @@ internal static class Program
             var hotelServiceService = new HotelServiceService(hotelServiceRepository);
             var invoiceRepository = new InvoiceRepository(connectionFactory);
             var invoiceService = new InvoiceService(invoiceRepository);
+            var reportRepository = new ReportRepository(connectionFactory);
+            var reportService = new ReportService(reportRepository);
             // tạo một MainForm cố định
 
             var mainForm = new MainForm();
@@ -127,7 +129,7 @@ internal static class Program
             mainForm.RegisterPage("S19", _=> new HousekeepingView(roomService, mainForm.NavigateToScreen));
 
             //đăng kí trang báo cáo tháng
-            mainForm.RegisterPage("S20", _=> new MonthlyReportView(mainForm.NavigateToScreen));
+            mainForm.RegisterPage("S20", _=> new MonthlyReportView(reportService,mainForm.NavigateToScreen));
 
             Application.Run(mainForm);
         }
