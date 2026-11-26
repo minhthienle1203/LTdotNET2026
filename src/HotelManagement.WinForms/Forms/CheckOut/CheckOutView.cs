@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using HotelManagement.Core.Entities;
+using HotelManagement.Core.Enums;
+using HotelManagement.Core.Exceptions;
 using HotelManagement.Core.Services;
 
 namespace HotelManagement.WinForms.Forms.Stays;
@@ -20,11 +22,13 @@ public sealed class CheckOutView : UserControl
     private decimal serviceCharge;
     private decimal roomCharge;
     private int? createdInvoiceId;
+
     private readonly Label lblStayInfo = new()
     {
         AutoSize = true,
         Text = "Phòng: --- | Khách: --- | Cọc: 0 đ\nCheck-in: --- | Thời gian ở: 0 giờ"
     };
+
     private readonly DateTimePicker dtpCheckOut = new()
     {
         Format = DateTimePickerFormat.Custom,
@@ -39,12 +43,14 @@ public sealed class CheckOutView : UserControl
         AutoSize = true,
         Margin = new Padding(0, 4, 14, 0)
     };
+
     private readonly RadioButton rdoByHour = new()
     {
         Text = "Tính theo giờ",
         AutoSize = true,
         Margin = new Padding(0, 4, 14, 0)
     };
+
     private readonly Label lblRoomTotal = new()
     {
         Text = "Tiền buồng: 0 đ",
@@ -52,7 +58,9 @@ public sealed class CheckOutView : UserControl
         Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
         Margin = new Padding(8, 5, 0, 0)
     };
+
     private readonly DataGridView serviceGrid = new();
+
     private readonly Label lblServiceTotal = new()
     {
         Text = "Tổng tiền dịch vụ: 0 đ",
@@ -67,6 +75,7 @@ public sealed class CheckOutView : UserControl
         Font = new Font("Segoe UI", 9.5f),
         Text = "Tiền buồng: 0 đ\nTiền dịch vụ: 0 đ\nTạm tính: 0 đ\nTrừ cọc: 0 đ"
     };
+
     private readonly Label lblAmountDue = new()
     {
         Text = "THỰC THU: 0 đ",
@@ -75,15 +84,18 @@ public sealed class CheckOutView : UserControl
         ForeColor = Color.OrangeRed,
         Margin = new Padding(0, 10, 0, 0)
     };
+
     private readonly ComboBox cboPayMethod = new()
     {
         Width = 170
     };
+
     private readonly TextBox txtNote = new()
     {
         Dock = DockStyle.Fill,
         Multiline = true
     };
+
     private readonly Button btnPay = new()
     {
         Text = "Thanh toán",
@@ -91,6 +103,7 @@ public sealed class CheckOutView : UserControl
         Padding = new Padding(8, 5, 8, 5),
         Font = new Font("Segoe UI", 8.5f, FontStyle.Bold)
     };
+
     private readonly Button btnPrint = new()
     {
         Text = "In hóa đơn",
@@ -99,9 +112,11 @@ public sealed class CheckOutView : UserControl
         Font = new Font("Segoe UI", 8.5f, FontStyle.Bold)
     };
 
-    public CheckOutView(Action<string, object?> navigate)
+    public CheckOutView(Action<string, object?> navigate, CheckoutService checkoutService, int stayId)
     {
         this.navigate = navigate ?? throw new ArgumentNullException(nameof(navigate));
+        this.checkoutService = checkoutService ?? throw new ArgumentNullException(nameof(checkoutService));
+        this.stayId = stayId;
         Dock = DockStyle.Fill;
         Padding = new Padding(10);
         AutoScroll = true;
@@ -137,13 +152,15 @@ public sealed class CheckOutView : UserControl
 
     private Control BuildLeft()
     {
-        var left = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, Padding = new Padding(0, 0, 8, 0) };
+        var left = new TableLayoutPanel
+            { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, Padding = new Padding(0, 0, 8, 0) };
         left.RowStyles.Add(new RowStyle(SizeType.Absolute, 150));
         left.RowStyles.Add(new RowStyle(SizeType.Absolute, 88));
         left.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
         //Thông tin lưu trú
-        var Stay1 = new GroupBox { Text = "Thông tin lượt lưu trú", Dock = DockStyle.Fill, Padding = new Padding(8, 18, 8, 8) };
+        var Stay1 = new GroupBox
+            { Text = "Thông tin lượt lưu trú", Dock = DockStyle.Fill, Padding = new Padding(8, 18, 8, 8) };
         var Stay2 = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2 };
         Stay2.RowStyles.Add(new RowStyle(SizeType.Absolute, 55));
         Stay2.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
@@ -155,14 +172,17 @@ public sealed class CheckOutView : UserControl
         Stay1.Controls.Add(Stay2);
 
         //Tính tiền buồng
-        var Rate1 = new GroupBox { Text = "Phương thức tính tiền buồng", Dock = DockStyle.Fill, Padding = new Padding(8, 18, 8, 6) };
+        var Rate1 = new GroupBox
+            { Text = "Phương thức tính tiền buồng", Dock = DockStyle.Fill, Padding = new Padding(8, 18, 8, 6) };
         var Rate2 = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
         Rate2.Controls.AddRange(new Control[] { rdoByDay, rdoByHour, lblRoomTotal });
         Rate1.Controls.Add(Rate2);
 
         // Danh mục dịch vụ
-        var dv = new GroupBox { Text = "Dịch vụ đã sử dụng", Dock = DockStyle.Fill, Padding = new Padding(8, 18, 8, 8) };
+        var dv = new GroupBox
+            { Text = "Dịch vụ đã sử dụng", Dock = DockStyle.Fill, Padding = new Padding(8, 18, 8, 8) };
         serviceGrid.Dock = DockStyle.Fill;
+        serviceGrid.AllowUserToAddRows = false;
         serviceGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
         serviceGrid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
         serviceGrid.ReadOnly = true;
@@ -184,19 +204,22 @@ public sealed class CheckOutView : UserControl
         right.RowStyles.Add(new RowStyle(SizeType.Percent, 30));
         right.RowStyles.Add(new RowStyle(SizeType.Percent, 70));
         //Chi tiết thanh toán
-        var Sum1 = new GroupBox { Text = "Chi tiết thanh toán", Dock = DockStyle.Fill, Padding = new Padding(10, 18, 10, 8) };
-        var Sum2 = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false };
+        var Sum1 = new GroupBox
+            { Text = "Chi tiết thanh toán", Dock = DockStyle.Fill, Padding = new Padding(10, 18, 10, 8) };
+        var Sum2 = new FlowLayoutPanel
+            { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false };
         Sum2.Controls.AddRange(new Control[] { lblSummary, lblAmountDue });
         Sum1.Controls.Add(Sum2);
 
         //Thanh toán
-        var Pay1 = new GroupBox { Text = "Phương thức thanh toán", Dock = DockStyle.Fill, Padding = new Padding(8, 18, 8, 8) };
+        var Pay1 = new GroupBox
+            { Text = "Phương thức thanh toán", Dock = DockStyle.Fill, Padding = new Padding(8, 18, 8, 8) };
         var Pay2 = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4 };
         Pay2.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
         Pay2.RowStyles.Add(new RowStyle(SizeType.Absolute, 22));
         Pay2.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         Pay2.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
-        cboPayMethod.Items.AddRange(new object[] { "Tiền mặt", "Thẻ POS", "Chuyển khoản" });
+        cboPayMethod.Items.AddRange(new object[] { "Tiền mặt", "Thanh toán mô phỏng" });
         cboPayMethod.SelectedIndex = 0;
         var lblNote = new Label
         {
@@ -216,41 +239,136 @@ public sealed class CheckOutView : UserControl
         right.Controls.Add(Pay1, 0, 1);
         return right;
     }
+
 //Danh sachs dịch vụ
     private void InitGrid()
     {
         serviceGrid.Columns.Clear();
         serviceGrid.ColumnHeadersDefaultCellStyle.Font = new Font(serviceGrid.Font, FontStyle.Bold);
-        serviceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(UsedServiceItem.ServiceName), HeaderText = "Dịch Vụ" });
-        serviceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(UsedServiceItem.Quantity), HeaderText = "Số Lượng" });
-        serviceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(UsedServiceItem.UnitPriceText), HeaderText = "Đơn Giá" });
-        serviceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(UsedServiceItem.AmountText), HeaderText = "Thành Tiền" });
+        serviceGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "colService", HeaderText = "Dịch Vụ" });
+        serviceGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "colQty", HeaderText = "Số Lượng" });
+        serviceGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "colPrice", HeaderText = "Đơn Giá" });
+        serviceGrid.Columns.Add(new DataGridViewTextBoxColumn { Name = "colAmount", HeaderText = "Thành Tiền" });
     }
+
 //Xử lý khi chọn
     private void InitEvents()
     {
         rdoByDay.CheckedChanged += (_, _) => RecalculateSummary();
         rdoByHour.CheckedChanged += (_, _) => RecalculateSummary();
         dtpCheckOut.ValueChanged += (_, _) => RecalculateSummary();
-
-        btnPay.Click += (_, _) =>
-        {
-            MessageBox.Show("Đã xác nhận thanh toán.");
-        };
-
-        btnPrint.Click += (_, _) =>
-        {
-            MessageBox.Show("Đang in hóa đơn.");
-            navigate("S17", null);
-        };
+        btnPay.Click += (_, _) => HandlePay();
+        btnPrint.Click += (_, _) => HandlePrint();
     }
-    // Các hàm tải dữ liệu
-    private void LoadCheckOutData() { }
-    private void LoadUsedServices() { serviceGrid.DataSource = new List<UsedServiceItem>(); }
-    private void RecalculateSummary() { }
-    private sealed record UsedServiceItem(string ServiceName, int Quantity, decimal UnitPrice, decimal Amount)
+
+    private void HandlePrint()
     {
-        public string UnitPriceText => $"{UnitPrice:N0} đ";
-        public string AmountText => $"{Amount:N0} đ";
+        bool isPaid = createdInvoiceId.HasValue || checkoutService.IsPaid(stayId);
+        MessageBox.Show(isPaid
+            ? "Đang in hóa đơn (Trạng thái: Đã thanh toán)."
+            : "Đang in hóa đơn (Trạng thái: Chưa thanh toán).");
+
+        navigate("S17", new { StayId = stayId, InvoiceId = createdInvoiceId, IsPaid = isPaid });
+    }
+
+    private void HandlePay()
+    {
+        if (currentStay == null) return;
+
+        try
+        {
+            var basis = rdoByHour.Checked ? ChargeBasis.Hour : ChargeBasis.Day;
+            var method = cboPayMethod.SelectedIndex == 1
+                ? PaymentMethod.Simulated
+                : PaymentMethod.Cash;
+            createdInvoiceId = checkoutService.PayAndCheckOut(
+                stayId: currentStay.StayId,
+                checkOutAt: dtpCheckOut.Value,
+                chargeBasis: basis,
+                serviceCharge: serviceCharge,
+                paymentMethod: method,
+                note: txtNote.Text);
+            currentStay = checkoutService.GetStay(stayId);
+            currentRoom = checkoutService.GetRoom(currentStay.RoomId);
+            btnPay.Enabled = false;
+            UpdateStayInfoLabel();
+            MessageBox.Show($"Đã xác nhận thanh toán. Phòng {currentRoom.RoomCode} chuyển sang trạng thái Dọn dẹp.");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("Lỗi");
+        }
+    }
+
+    // Các hàm tải dữ liệu
+    private void LoadCheckOutData()
+    {
+        currentStay = checkoutService.GetStay(stayId);
+        currentRoom = checkoutService.GetRoom(currentStay.RoomId);
+        customerName = checkoutService.GetCustomerName(currentStay.CustomerId);
+        depositAmount = checkoutService.GetDepositAmount(currentStay.ReservationId);
+        bool paid = currentStay.Status == StayStatus.Completed || checkoutService.IsPaid(stayId);
+        btnPay.Enabled = !paid;
+        UpdateStayInfoLabel();
+    }
+
+    private void LoadUsedServices()
+    {
+        serviceGrid.Rows.Clear();
+        var items = checkoutService.GetUsedServices(stayId);
+        foreach (var item in items)
+        {
+            string serviceName = checkoutService.GetServiceName(item.ServiceId);
+            serviceGrid.Rows.Add(
+                serviceName,
+                item.Quantity,
+                $"{item.UnitPrice:N0}đ",
+                $"{item.Amount:N0}đ");
+        }
+
+        serviceCharge = checkoutService.CalculateServiceTotal(items);
+        lblServiceTotal.Text = $"Tổng tiền dịch vụ: {serviceCharge:N0}đ";
+    }
+
+    private void RecalculateSummary()
+    {
+        if (currentStay == null) return;
+        var basis = rdoByHour.Checked ? ChargeBasis.Hour : ChargeBasis.Day;
+        var span = dtpCheckOut.Value - currentStay.ActualCheckIn;
+        try
+        {
+            (_, _, roomCharge) = checkoutService.CalculateRoomCharge(currentStay, dtpCheckOut.Value, basis);
+        }
+        catch
+        {
+            roomCharge = 0m;
+        }
+
+        var (subTotal, depositDeducted, amountDue, refundDue) =
+                checkoutService.CalculateTotals(roomCharge, serviceCharge, depositAmount);
+            lblRoomTotal.Text = $"Tiền buồng: {roomCharge:N0} đ";
+            string refundLine = refundDue > 0m ? $"\nHoàn cọc: {refundDue:N0}đ" : string.Empty;
+            lblSummary.Text =
+                $"Tiền buồng: {roomCharge:N0}đ\n" +
+                $"Tiền dịch vụ: {serviceCharge:N0}đ\n" +
+                $"Tạm tính: {subTotal:N0} \n" +
+                $"Trừ cọc: {depositDeducted:N0}đ" +
+                refundLine;
+            lblAmountDue.Text = $"THỰC THU: {amountDue:N0}đ";
+    }
+
+    private void UpdateStayInfoLabel(TimeSpan? span = null)
+    {
+        if (currentStay == null || currentRoom == null) return;
+        var elapsed = span ?? (dtpCheckOut.Value - currentStay.ActualCheckIn);
+        double hours = Math.Max(0, elapsed.TotalHours);
+        string statusText = (currentStay.Status == StayStatus.Completed || checkoutService.IsPaid(stayId))
+            ? " | Đã thanh toán"
+            : string.Empty;
+        lblStayInfo.Text =
+            $"Phòng: {currentRoom.RoomCode} | Khách: {customerName} | Cọc: {depositAmount:N0}đ{statusText}\n" +
+            $"Check-in: {currentStay.ActualCheckIn:dd/MM/yyyy HH:mm} | Thời gian ở: {hours:0.#} giờ";
     }
 }
+
+
