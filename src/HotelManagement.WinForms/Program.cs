@@ -107,6 +107,18 @@ internal static class Program
                     view.RoomMapRequested += (_, _) => mainForm.NavigateToScreen("S01");
                     return view;
                 });
+            mainForm.RegisterPage(
+                "S12",
+                _ =>
+                {
+                    var repository = new ActiveStayRepository(connectionFactory.CreateConnection);
+                    var view = new ActiveStaysView(new ActiveStayService(repository));
+                    view.CheckInRequested += (_, _) => mainForm.NavigateToScreen("S11");
+                    view.RoomMapRequested += roomId => mainForm.NavigateToScreen("S01", roomId);
+                    view.AddServiceRequested += stayId => mainForm.NavigateToScreen("S15", stayId);
+                    view.CheckoutRequested += stayId => mainForm.NavigateToScreen("S16", stayId);
+                    return view;
+                });
 
 
             // Đăng kí trang dichj vụ
