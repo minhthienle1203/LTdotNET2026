@@ -36,10 +36,7 @@ public sealed class CheckInView : UserControl
     private readonly TextBox _txtSearch = new() { Width = 300, PlaceholderText = "Mã đặt phòng, tên, SĐT, số phòng" };
     private readonly ComboBox _cboStatus = new() { Width = 170, DropDownStyle = ComboBoxStyle.DropDownList };
     private readonly DataGridView _grid = new();
-
-    private readonly Label _lblBookingState = new()
-        { AutoSize = true, Font = Bold(10), Margin = new Padding(3, 8, 12, 3) };
-
+    private readonly Label _lblBookingState = new() { AutoSize = true, Font = Bold(10), Margin = new Padding(3, 8, 12, 3) };
     private readonly Label _lblBookingDetail = Info("");
     private readonly Button _btnCancelBooking = MakeButton("Hủy đặt phòng", Color.White, Red);
     private readonly TextBox _txtName = ReadOnlyBox();
@@ -50,12 +47,10 @@ public sealed class CheckInView : UserControl
     private readonly Button _btnAddCustomer = MakeButton("+ Thêm khách mới", Pale, Blue);
     private readonly TextBox _txtCheckInTime = ReadOnlyBox();
     private readonly NumericUpDown _numGuests = new() { Minimum = 1, Maximum = 20, Value = 1, Dock = DockStyle.Top };
-
     private readonly DateTimePicker _dtCheckOut = new()
     {
         Format = DateTimePickerFormat.Custom, CustomFormat = "dd/MM/yyyy HH:mm", Dock = DockStyle.Top
     };
-
     private readonly TextBox _txtNote = new() { Multiline = true, Height = 55, Dock = DockStyle.Top };
     private readonly Label _lblHeldRoom = Info("");
     private readonly ComboBox _cboRoom = new() { DropDownStyle = ComboBoxStyle.DropDownList, Dock = DockStyle.Top };
@@ -64,12 +59,10 @@ public sealed class CheckInView : UserControl
     private readonly ErrorProvider _errors = new() { BlinkStyle = ErrorBlinkStyle.NeverBlink };
     private readonly Label _lblSummary = Info("");
     private readonly Label _lblChecklistTitle = new() { AutoSize = true, Font = Bold(10) };
-
     private readonly FlowLayoutPanel _checklist = new()
     {
         FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoSize = true
     };
-
     private readonly Label _lblResult = new() { AutoSize = true, MaximumSize = new Size(320, 0), Font = Bold(9.5f) };
     private readonly Button _btnConfirm = MakeButton("XÁC NHẬN NHẬN PHÒNG  [F10]", Color.Black, Color.White);
     private readonly Button _btnReset = MakeButton("Hủy bỏ (Esc)", Color.White, Navy);
@@ -110,26 +103,12 @@ public sealed class CheckInView : UserControl
     {
         switch (keyData)
         {
-            case Keys.F2:
-                Guard(() => SetMode(CheckInMode.Reservation));
-                _txtSearch.Focus();
-                return true;
-            case Keys.F3:
-                FindCustomer();
-                return true;
-            case Keys.F4:
-                _cboRoom.Focus();
-                if (_cboRoom.Enabled) _cboRoom.DroppedDown = true;
-                return true;
-            case Keys.F5:
-                Guard(RefreshData);
-                return true;
-            case Keys.F10:
-                Confirm();
-                return true;
-            case Keys.Escape when !_cboRoom.DroppedDown && !_cboStatus.DroppedDown:
-                AskReset();
-                return true;
+            case Keys.F2: Guard(() => SetMode(CheckInMode.Reservation)); _txtSearch.Focus(); return true;
+            case Keys.F3: FindCustomer(); return true;
+            case Keys.F4: _cboRoom.Focus(); if (_cboRoom.Enabled) _cboRoom.DroppedDown = true; return true;
+            case Keys.F5: Guard(RefreshData); return true;
+            case Keys.F10: Confirm(); return true;
+            case Keys.Escape when !_cboRoom.DroppedDown && !_cboStatus.DroppedDown: AskReset(); return true;
             default: return base.ProcessCmdKey(ref msg, keyData);
         }
     }
@@ -147,14 +126,10 @@ public sealed class CheckInView : UserControl
             Dock = DockStyle.Top, AutoSize = true, FlowDirection = FlowDirection.TopDown,
             WrapContents = false, BackColor = Color.White, Padding = new Padding(12, 8, 12, 6)
         };
-        header.Controls.Add(new Label
-        {
-            Text = "5. LỄ TÂN  ›  S11 - NHẬN PHÒNG (CHECK-IN)", AutoSize = true, ForeColor = Blue, Font = Bold(8.5f)
-        });
-        header.Controls.Add(
-            new Label { Text = "Tiếp Nhận && Bàn Giao Phòng Lưu Trú", AutoSize = true, Font = Bold(13) });
+        header.Controls.Add(new Label { Text = "5. LỄ TÂN  ›  S11 - NHẬN PHÒNG (CHECK-IN)", AutoSize = true, ForeColor = Blue, Font = Bold(8.5f) });
+        header.Controls.Add(new Label { Text = "Tiếp Nhận && Bàn Giao Phòng Lưu Trú", AutoSize = true, Font = Bold(13) });
 
-        var btnMap = MakeButton("Sơ đồ phòng (S01)", Pale, Navy);
+        var btnMap = MakeButton("  Sơ đồ phòng (S01)", Pale, Navy);
         var btnStays = MakeButton("Lưu trú hiện tại (S12)", Pale, Navy);
         var btnRefresh = MakeButton("Làm mới (F5)", Blue, Color.White);
         btnMap.Click += (_, _) => RoomMapRequested?.Invoke(this, EventArgs.Empty);
@@ -164,8 +139,7 @@ public sealed class CheckInView : UserControl
             Info("F10: Hoàn tất  |  F2: Chọn đặt phòng  |  F3: Tra cứu khách  |  F4: Đổi phòng  |  Esc: Hủy bỏ"),
             btnMap, btnStays, btnRefresh));
 
-        var modes = new TableLayoutPanel
-            { Dock = DockStyle.Top, Height = 66, ColumnCount = 2, Padding = new Padding(10, 4, 10, 4) };
+        var modes = new TableLayoutPanel { Dock = DockStyle.Top, Height = 66, ColumnCount = 2, Padding = new Padding(10, 4, 10, 4) };
         modes.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
         modes.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
         modes.Controls.Add(_btnReservationMode, 0, 0);
@@ -175,12 +149,10 @@ public sealed class CheckInView : UserControl
         left.Controls.Add(_bookingCard);
         left.Controls.Add(Card("②  XÁC THỰC KHÁCH HÀNG && GIẤY TỜ",
             Flow(_btnFindCustomer, _btnAddCustomer),
-            Fields(("Họ và tên khách đại diện", _txtName), ("Loại && số giấy tờ", _txtIdentity),
-                ("Số điện thoại", _txtPhone)),
+            Fields(("Họ và tên khách đại diện", _txtName), ("Loại && số giấy tờ", _txtIdentity), ("Số điện thoại", _txtPhone)),
             _lblCustomerMore));
         left.Controls.Add(Card("③  THÔNG TIN LƯU TRÚ THỰC TẾ",
-            Fields(("Thời điểm check-in (giờ hệ thống)", _txtCheckInTime), ("Số khách thực tế", _numGuests),
-                ("Dự kiến trả phòng", _dtCheckOut)),
+            Fields(("Thời điểm check-in (giờ hệ thống)", _txtCheckInTime), ("Số khách thực tế", _numGuests), ("Dự kiến trả phòng", _dtCheckOut)),
             Fields(("Ghi chú phục vụ && yêu cầu đặc biệt", _txtNote))));
         left.Controls.Add(Card("④  CHỈ ĐỊNH PHÒNG THỰC TẾ  [F4]",
             _lblHeldRoom,
@@ -194,8 +166,7 @@ public sealed class CheckInView : UserControl
         right.Controls.Add(Card("BỘ KIỂM TRA ĐIỀU KIỆN CHECK-IN", _lblChecklistTitle, _checklist));
         right.Controls.Add(Card("THỰC HIỆN", _lblResult, _btnConfirm, Flow(_btnReset, _btnPrint)));
 
-        var body = new TableLayoutPanel
-            { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Padding = new Padding(6, 0, 6, 6) };
+        var body = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Padding = new Padding(6, 0, 6, 6) };
         body.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         body.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 390));
         body.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
@@ -236,43 +207,21 @@ public sealed class CheckInView : UserControl
     {
         _btnReservationMode.Click += (_, _) => Guard(() => SetMode(CheckInMode.Reservation));
         _btnWalkInMode.Click += (_, _) => Guard(() => SetMode(CheckInMode.WalkIn));
-        _txtSearch.TextChanged += (_, _) =>
-        {
-            if (!_loading) Guard(() => LoadBookings(_booking?.ReservationId));
-        };
-        _cboStatus.SelectedIndexChanged += (_, _) =>
-        {
-            if (!_loading) Guard(() => LoadBookings(null));
-        };
+        _txtSearch.TextChanged += (_, _) => { if (!_loading) Guard(() => LoadBookings(_booking?.ReservationId)); };
+        _cboStatus.SelectedIndexChanged += (_, _) => { if (!_loading) Guard(() => LoadBookings(null)); };
         _grid.SelectionChanged += (_, _) =>
         {
             if (!_loading) Guard(() => SelectBooking(_grid.CurrentRow?.Tag as CheckInReservationDto));
         };
-        _numGuests.ValueChanged += (_, _) =>
-        {
-            if (!_loading) Guard(UpdateState);
-        };
+        _numGuests.ValueChanged += (_, _) => { if (!_loading) Guard(UpdateState); };
         _dtCheckOut.ValueChanged += (_, _) =>
         {
-            if (!_loading)
-                Guard(() =>
-                {
-                    LoadRooms(SelectedRoom?.RoomId);
-                    UpdateState();
-                });
+            if (!_loading) Guard(() => { LoadRooms(SelectedRoom?.RoomId); UpdateState(); });
         };
-        _cboRoom.SelectedIndexChanged += (_, _) =>
-        {
-            if (!_loading) Guard(UpdateState);
-        };
+        _cboRoom.SelectedIndexChanged += (_, _) => { if (!_loading) Guard(UpdateState); };
         _cboRoomType.SelectedIndexChanged += (_, _) =>
         {
-            if (!_loading)
-                Guard(() =>
-                {
-                    LoadRooms(SelectedRoom?.RoomId);
-                    UpdateState();
-                });
+            if (!_loading) Guard(() => { LoadRooms(SelectedRoom?.RoomId); UpdateState(); });
         };
         _btnFindCustomer.Click += (_, _) => FindCustomer();
         _btnAddCustomer.Click += (_, _) => AddCustomer();
@@ -310,19 +259,9 @@ public sealed class CheckInView : UserControl
 
     private void RefreshData()
     {
-        if (_receipt is not null)
-        {
-            ResetForm();
-            return;
-        }
-
+        if (_receipt is not null) { ResetForm(); return; }
         StyleModes();
-        if (_mode == CheckInMode.Reservation)
-        {
-            LoadBookings(_booking?.ReservationId);
-            return;
-        }
-
+        if (_mode == CheckInMode.Reservation) { LoadBookings(_booking?.ReservationId); return; }
         if (_customer is not null) _customer = _service.GetCustomer(_customer.CustomerId);
         var roomId = SelectedRoom?.RoomId;
         ShowCustomer();
@@ -429,8 +368,8 @@ public sealed class CheckInView : UserControl
     {
         var current = (_cboRoomType.SelectedItem as TypeOption)?.Id;
         var types = rooms.GroupBy(r => r.RoomTypeId)
-            .Select(g => new TypeOption(g.Key, g.First().TypeName))
-            .OrderBy(t => t.Name).ToList();
+                         .Select(g => new TypeOption(g.Key, g.First().TypeName))
+                         .OrderBy(t => t.Name).ToList();
         Silently(() =>
         {
             _cboRoomType.Items.Clear();
@@ -477,9 +416,8 @@ public sealed class CheckInView : UserControl
             : _booking.RoomCode is null
                 ? $"Đặt phòng chỉ giữ theo loại {_booking.TypeName}. Hãy chọn một phòng."
                 : $"Phòng đang giữ: P.{_booking.RoomCode}. Chỉ đổi được sang phòng cùng loại {_booking.TypeName}.";
-        _lblRates.Text = room is null
-            ? ""
-            : $"Giá chụp khi check-in:  {Money(room.DailyRate)}/ngày  •  {Money(room.HourlyRate)}/giờ  •  Tối đa {room.MaxOccupancy} khách";
+        _lblRates.Text = room is null ? "" :
+            $"Giá chụp khi check-in:  {Money(room.DailyRate)}/ngày  •  {Money(room.HourlyRate)}/giờ  •  Tối đa {room.MaxOccupancy} khách";
 
         _lblSummary.Text = string.Join(Environment.NewLine,
             $"Phòng nhận:  {(room is null ? "—" : $"P.{room.RoomCode} ({room.FloorName})")}",
@@ -501,7 +439,6 @@ public sealed class CheckInView : UserControl
             _ => ("Chưa đủ điều kiện, xem bảng kiểm tra phía trên.", Red)
         };
     }
-
     private void ShowFieldErrors()
     {
         _errors.Clear();
@@ -527,8 +464,7 @@ public sealed class CheckInView : UserControl
             return;
         }
 
-        _lblBookingState.Text =
-            $"● {_booking.ReservationCode} – {CheckInService.StatusText(_booking.Status).ToUpper(Vi)}";
+        _lblBookingState.Text = $"● {_booking.ReservationCode} – {CheckInService.StatusText(_booking.Status).ToUpper(Vi)}";
         _lblBookingState.ForeColor = StatusColor(_booking.Status);
         var hint = _booking.Status switch
         {
@@ -546,8 +482,7 @@ public sealed class CheckInView : UserControl
     private void ShowChecklist()
     {
         foreach (var old in _checklist.Controls.Cast<Control>().ToList()) old.Dispose();
-        _lblChecklistTitle.Text =
-            _evaluation is null ? "—" : $"{_evaluation.PassedCount}/{_evaluation.Items.Count} đạt";
+        _lblChecklistTitle.Text = _evaluation is null ? "—" : $"{_evaluation.PassedCount}/{_evaluation.Items.Count} đạt";
         if (_evaluation is null) return;
 
         var number = 1;
@@ -564,8 +499,7 @@ public sealed class CheckInView : UserControl
 
     private void StyleModes()
     {
-        _btnReservationMode.Text =
-            $"CÓ ĐẶT TRƯỚC (RESERVATION CHECK-IN)\n{_service.CountDueToday()} đơn đến hạn hôm nay";
+        _btnReservationMode.Text = $"CÓ ĐẶT TRƯỚC (RESERVATION CHECK-IN)\n{_service.CountDueToday()} đơn đến hạn hôm nay";
         _btnWalkInMode.Text = "KHÁCH VÃNG LAI (WALK-IN CHECK-IN)\nNhận phòng trực tiếp, không cần đặt trước";
         foreach (var (button, active) in new[]
                  {
@@ -582,24 +516,14 @@ public sealed class CheckInView : UserControl
     {
         if (_mode != CheckInMode.WalkIn || _receipt is not null) return;
         if (Dialogs.PickCustomer(this, _service) is not { } customer) return;
-        Guard(() =>
-        {
-            _customer = customer;
-            ShowCustomer();
-            UpdateState();
-        });
+        Guard(() => { _customer = customer; ShowCustomer(); UpdateState(); });
     }
 
     private void AddCustomer()
     {
         if (_mode != CheckInMode.WalkIn || _receipt is not null) return;
         if (Dialogs.AddCustomer(this, _service) is not { } customer) return;
-        Guard(() =>
-        {
-            _customer = customer;
-            ShowCustomer();
-            UpdateState();
-        });
+        Guard(() => { _customer = customer; ShowCustomer(); UpdateState(); });
     }
 
     private void Confirm()
@@ -637,5 +561,315 @@ public sealed class CheckInView : UserControl
             MessageBox.Show(this, $"Đã nhận phòng {result.RoomCode}. Lượt lưu trú #{result.StayId}.",
                 "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }, reloadOnBusinessError: true);
+    }
+    private void ShowCompleted(string receipt, CheckInResultDto result)
+    {
+        _receipt = receipt;
+        _errors.Clear();
+        _cboRoomType.Enabled = false;
+        _btnConfirm.Enabled = false;
+        _btnConfirm.BackColor = Color.Silver;
+        _btnPrint.Enabled = true;
+        _btnCancelBooking.Visible = false;
+        _btnFindCustomer.Enabled = _btnAddCustomer.Enabled = false;
+        _numGuests.Enabled = _dtCheckOut.Enabled = _cboRoom.Enabled = false;
+        _txtNote.ReadOnly = true;
+        _lblResult.ForeColor = Green;
+        _lblResult.Text = $"ĐÃ NHẬN PHÒNG – lượt lưu trú #{result.StayId}.\nBấm Esc hoặc F5 để tiếp nhận khách khác.";
+        if (_booking is not null)
+        {
+            _lblBookingState.Text = $"● {_booking.ReservationCode} – ĐÃ NHẬN PHÒNG";
+            _lblBookingState.ForeColor = StatusColor(ReservationStatus.CheckedIn);
+        }
+        StyleModes();
+    }
+
+    private void CancelBooking()
+    {
+        if (_booking is not { Status: ReservationStatus.Confirmed } booking) return;
+        var message = $"Hủy {booking.ReservationCode} của {booking.CustomerName}?";
+        if (booking.DepositAmount > 0)
+            message += $"\nĐã nhận cọc {Money(booking.DepositAmount)}. Hệ thống chưa ghi nhận hoàn cọc, hãy xử lý riêng.";
+        if (Dialogs.AskCancelReason(this, message) is not { } reason) return;
+
+        Guard(() =>
+        {
+            _service.CancelReservation(booking.ReservationId, reason);
+            Silently(() => _cboStatus.SelectedIndex = _cboStatus.Items.Count - 1);
+            _booking = null;
+            LoadBookings(booking.ReservationId);
+            StyleModes();
+        }, reloadOnBusinessError: true);
+    }
+
+    private void AskReset()
+    {
+        if (_receipt is null && MessageBox.Show(this, "Bỏ thông tin đang nhập? (Đặt phòng không bị hủy.)",
+                "Hủy bỏ thao tác", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+        Guard(ResetForm);
+    }
+
+    private void PrintReceipt()
+    {
+        if (_receipt is not { } text) return;
+        using var document = new PrintDocument { DocumentName = "Phieu nhan phong" };
+        document.PrintPage += (_, e) =>
+        {
+            using var font = new Font("Segoe UI", 12);
+            e.Graphics!.DrawString(text, font, Brushes.Black, e.MarginBounds);
+        };
+        using var preview = new PrintPreviewDialog { Document = document, Width = 800, Height = 700 };
+        preview.ShowDialog(this);
+    }
+
+    private void Guard(Action action, bool reloadOnBusinessError = false)
+    {
+        try { action(); }
+        catch (BusinessRuleException ex)
+        {
+            MessageBox.Show(this, ex.Message, "Không thể thực hiện", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            if (reloadOnBusinessError) Guard(RefreshData);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, "Lỗi hệ thống/CSDL:\n" + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void Silently(Action action)
+    {
+        var previous = _loading;
+        _loading = true;
+        try { action(); }
+        finally { _loading = previous; }
+    }
+
+    private static string Money(decimal value) => value.ToString("N0", Vi) + " VNĐ";
+    private static DateTime TrimToMinute(DateTime v) => new(v.Year, v.Month, v.Day, v.Hour, v.Minute, 0);
+    private static Font Bold(float size) => new("Segoe UI", size, FontStyle.Bold);
+
+    private static Color StatusColor(ReservationStatus status) => status switch
+    {
+        ReservationStatus.Confirmed => Color.FromArgb(194, 101, 0),
+        ReservationStatus.CheckedIn => Blue,
+        ReservationStatus.Completed => Green,
+        ReservationStatus.Cancelled => Red,
+        _ => Color.DimGray
+    };
+
+    private static Label Info(string value) => new() { Text = value, AutoSize = true, Margin = new Padding(3, 6, 8, 3) };
+    private static TextBox ReadOnlyBox() => new() { ReadOnly = true, Dock = DockStyle.Top, BackColor = Pale };
+
+    private static Button MakeButton(string text, Color back, Color fore) => new()
+    {
+        Text = text, AutoSize = true, MinimumSize = new Size(110, 30), BackColor = back, ForeColor = fore,
+        FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand, UseVisualStyleBackColor = false
+    };
+
+    private static Button ModeButton() => new()
+    {
+        Dock = DockStyle.Fill, FlatStyle = FlatStyle.Flat, TextAlign = ContentAlignment.MiddleLeft,
+        Padding = new Padding(10, 0, 0, 0), Font = Bold(9.5f), Cursor = Cursors.Hand
+    };
+
+    private static FlowLayoutPanel Flow(params Control[] controls)
+    {
+        var panel = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Top, Margin = new Padding(0) };
+        panel.Controls.AddRange(controls);
+        return panel;
+    }
+    private static TableLayoutPanel Fields(params (string Caption, Control Input)[] fields)
+    {
+        var table = new TableLayoutPanel
+        {
+            AutoSize = true, Dock = DockStyle.Top, ColumnCount = fields.Length, RowCount = 2, Margin = new Padding(0)
+        };
+        for (var i = 0; i < fields.Length; i++)
+        {
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / fields.Length));
+            table.Controls.Add(new Label { Text = fields[i].Caption, AutoSize = true }, i, 0);
+            table.Controls.Add(fields[i].Input, i, 1);
+        }
+        return table;
+    }
+
+    private static TableLayoutPanel Column()
+    {
+        var column = new TableLayoutPanel { AutoSize = true, Dock = DockStyle.Top, ColumnCount = 1 };
+        column.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        return column;
+    }
+
+    private static Panel Scrollable(Control content)
+    {
+        var panel = new Panel { Dock = DockStyle.Fill, AutoScroll = true };
+        panel.Controls.Add(content);
+        return panel;
+    }
+
+    private static TableLayoutPanel Card(string title, params object[] content)
+    {
+        var card = Column();
+        card.BackColor = Color.White;
+        card.Padding = new Padding(10);
+        card.Margin = new Padding(4);
+        card.Controls.Add(new Label { Text = title, AutoSize = true, Font = Bold(10), Margin = new Padding(3, 0, 3, 8) });
+        foreach (var item in content)
+        {
+            if (item is Control control) card.Controls.Add(control);
+            else if (item is Control[] many) card.Controls.AddRange(many);
+        }
+        return card;
+    }
+}
+internal static class Dialogs
+{
+    private static Form NewForm(string title, int width, int height) => new()
+    {
+        Text = title, ClientSize = new Size(width, height), StartPosition = FormStartPosition.CenterParent,
+        FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false, MinimizeBox = false,
+        Font = new Font("Segoe UI", 9F), ShowInTaskbar = false
+    };
+
+    private static FlowLayoutPanel ButtonBar(params Button[] buttons)
+    {
+        var bar = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Bottom, Height = 48, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(8)
+        };
+        bar.Controls.AddRange(buttons);
+        return bar;
+    }
+
+    private static Button Btn(string text, DialogResult result = DialogResult.None) =>
+        new() { Text = text, DialogResult = result, AutoSize = true, MinimumSize = new Size(90, 30) };
+
+    public static string? AskCancelReason(IWin32Window owner, string message)
+    {
+        using var form = NewForm("Hủy đặt phòng", 460, 220);
+        var label = new Label { Dock = DockStyle.Top, Height = 75, Padding = new Padding(10), Text = message };
+        var box = new TextBox { Dock = DockStyle.Fill, Multiline = true, PlaceholderText = "Lý do hủy (bắt buộc)" };
+        var ok = Btn("Xác nhận hủy");
+        var close = Btn("Không hủy", DialogResult.Cancel);
+        ok.Enabled = false;
+        box.TextChanged += (_, _) => ok.Enabled = !string.IsNullOrWhiteSpace(box.Text);
+        ok.Click += (_, _) => form.DialogResult = DialogResult.OK;
+        form.Controls.Add(box);
+        form.Controls.Add(label);
+        form.Controls.Add(ButtonBar(ok, close));
+        form.CancelButton = close;
+        return form.ShowDialog(owner) == DialogResult.OK ? box.Text.Trim() : null;
+    }
+
+    public static Customer? PickCustomer(IWin32Window owner, CheckInService service)
+    {
+        using var form = NewForm("Tra cứu khách hàng (F3)", 700, 420);
+        var search = new TextBox { Dock = DockStyle.Top, PlaceholderText = "Tên, số điện thoại hoặc số giấy tờ" };
+        var grid = new DataGridView
+        {
+            Dock = DockStyle.Fill, ReadOnly = true, AllowUserToAddRows = false, RowHeadersVisible = false,
+            SelectionMode = DataGridViewSelectionMode.FullRowSelect, MultiSelect = false,
+            AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, BackgroundColor = Color.White
+        };
+        grid.Columns.Add("name", "Họ tên");
+        grid.Columns.Add("id", "Giấy tờ");
+        grid.Columns.Add("phone", "Điện thoại");
+
+        void Reload()
+        {
+            grid.Rows.Clear();
+            try
+            {
+                foreach (var c in service.SearchCustomers(search.Text))
+                {
+                    var i = grid.Rows.Add(c.FullName, $"{c.IdentityType} {c.IdentityNumber}", c.Phone);
+                    grid.Rows[i].Tag = c;
+                }
+            }
+            catch (Exception ex) { MessageBox.Show(form, ex.Message, "Lỗi dữ liệu"); }
+        }
+
+        var ok = Btn("Chọn khách");
+        var close = Btn("Đóng", DialogResult.Cancel);
+        void Choose() { if (grid.CurrentRow?.Tag is Customer) form.DialogResult = DialogResult.OK; }
+        ok.Click += (_, _) => Choose();
+        grid.CellDoubleClick += (_, e) => { if (e.RowIndex >= 0) Choose(); };
+        search.TextChanged += (_, _) => Reload();
+
+        form.Controls.Add(grid);
+        form.Controls.Add(search);
+        form.Controls.Add(ButtonBar(ok, close));
+        form.AcceptButton = ok;
+        form.CancelButton = close;
+        Reload();
+        return form.ShowDialog(owner) == DialogResult.OK ? grid.CurrentRow?.Tag as Customer : null;
+    }
+
+    public static Customer? AddCustomer(IWin32Window owner, CheckInService service)
+    {
+        using var form = NewForm("Thêm khách mới", 460, 300);
+        var table = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, Padding = new Padding(10) };
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+
+        T Row<T>(string caption, T control) where T : Control
+        {
+            table.Controls.Add(new Label { Text = caption, AutoSize = true, Anchor = AnchorStyles.Left });
+            control.Dock = DockStyle.Top;
+            table.Controls.Add(control);
+            return control;
+        }
+
+        var name = Row("Họ tên (*)", new TextBox());
+        var type = Row("Loại giấy tờ (*)", new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList });
+        type.Items.AddRange([IdentityType.CCCD, IdentityType.Passport]);
+        type.SelectedIndex = 0;
+        var number = Row("Số giấy tờ (*)", new TextBox());
+        var phone = Row("Điện thoại (*)", new TextBox());
+        var email = Row("Email", new TextBox());
+        var address = Row("Địa chỉ", new TextBox());
+
+        using var errors = new ErrorProvider { BlinkStyle = ErrorBlinkStyle.NeverBlink };
+        void Check(Control box, string? problem)
+        {
+            errors.SetIconPadding(box, -20);
+            errors.SetError(box, problem ?? "");
+        }
+        void CheckName() => Check(name, string.IsNullOrWhiteSpace(name.Text) ? "Họ tên không được để trống." : null);
+        void CheckNumber() => Check(number,
+            string.IsNullOrWhiteSpace(number.Text) ? "Chưa nhập số giấy tờ."
+            : CheckInService.IdentityProblem((IdentityType)type.SelectedItem!, number.Text.Trim()));
+        void CheckPhone() => Check(phone, CheckInService.PhoneProblem(phone.Text));
+        void CheckEmail() => Check(email, CheckInService.EmailProblem(email.Text));
+        name.Leave += (_, _) => CheckName();
+        number.Leave += (_, _) => CheckNumber();
+        type.SelectedIndexChanged += (_, _) => { if (number.Text.Length > 0) CheckNumber(); };
+        phone.Leave += (_, _) => CheckPhone();
+        email.Leave += (_, _) => CheckEmail();
+
+        Customer? created = null;
+        var ok = Btn("Lưu hồ sơ");
+        var close = Btn("Đóng", DialogResult.Cancel);
+        ok.Click += (_, _) =>
+        {
+            CheckName(); CheckNumber(); CheckPhone(); CheckEmail();
+            try
+            {
+                created = service.CreateCustomer(new Customer
+                {
+                    FullName = name.Text, IdentityType = (IdentityType)type.SelectedItem!,
+                    IdentityNumber = number.Text, Phone = phone.Text, Email = email.Text, Address = address.Text
+                });
+                form.DialogResult = DialogResult.OK;
+            }
+            catch (BusinessRuleException ex) { MessageBox.Show(form, ex.Message, "Kiểm tra dữ liệu"); }
+            catch (Exception ex) { MessageBox.Show(form, ex.Message, "Lỗi dữ liệu"); }
+        };
+
+        form.Controls.Add(table);
+        form.Controls.Add(ButtonBar(ok, close));
+        form.AcceptButton = ok;
+        form.CancelButton = close;
+        return form.ShowDialog(owner) == DialogResult.OK ? created : null;
     }
 }
