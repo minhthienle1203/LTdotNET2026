@@ -55,6 +55,8 @@ internal static class Program
             var invoiceService = new InvoiceService(invoiceRepository);
             var reportRepository = new ReportRepository(connectionFactory);
             var reportService = new ReportService(reportRepository);
+            var stayServiceRepository = new StayServiceRepository(connectionFactory);
+            var stayServiceService = new StayServiceService(stayServiceRepository);
             // tạo một MainForm cố định
 
             var mainForm = new MainForm();
@@ -113,7 +115,19 @@ internal static class Program
             // Đăng kí trang ghi nhận dịch vụ
             mainForm.RegisterPage(
                 "S15",
-                _ => new ServiceUsageView(mainForm.NavigateToScreen, hotelServiceService)
+                context =>
+                {
+                    var view = new ServiceUsageView(mainForm.NavigateToScreen, hotelServiceService, stayServiceService);
+                    if (context is int stayId && stayId > 0)
+                    {
+                        view.SetStayContext(stayId);
+                    }
+                    else if (context is ValueTuple<int, string?> stayInfo && stayInfo.Item1 > 0)
+                    {
+                        view.SetStayContext(stayInfo.Item1, stayInfo.Item2);
+                    }
+                    return view;
+                }
             );
             // Đăng kí trang checkout
             mainForm.RegisterPage(
