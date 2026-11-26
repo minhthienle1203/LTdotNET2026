@@ -67,4 +67,26 @@ public sealed class InvoiceRepository : IInvoiceRepository
         }
         return invoices;
     }
+    public void MarkAsPrinted(int invoiceId, DateTime printedAt)
+    {
+        const string sql = @"
+        UPDATE Invoice
+        SET PrintedAt = @PrintedAt
+        WHERE InvoiceId = @InvoiceId;";
+
+        using var connection = _connectionFactory.CreateConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        var pPrintedAt = command.CreateParameter();
+        pPrintedAt.ParameterName = "@PrintedAt";
+        pPrintedAt.Value = printedAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+        command.Parameters.Add(pPrintedAt);
+
+        var pInvoiceId = command.CreateParameter();
+        pInvoiceId.ParameterName = "@InvoiceId";
+        pInvoiceId.Value = invoiceId;
+        command.Parameters.Add(pInvoiceId);
+        command.ExecuteNonQuery();
+    }
 }

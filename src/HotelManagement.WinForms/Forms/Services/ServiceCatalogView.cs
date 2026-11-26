@@ -62,8 +62,8 @@ public sealed class ServiceCatalogView : UserControl
         serviceCount.TextAlign = ContentAlignment.MiddleLeft;
         layout.Controls.Add(BuildArea(), 0, 4);
         Controls.Add(layout);
-        Filter();
         LoadServices();
+        Filter();
         RefreshData();
     }
 
@@ -142,8 +142,8 @@ public sealed class ServiceCatalogView : UserControl
     private Control BuildArea()
     {
         var panel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1 };
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 70)); // Bảng danh mục dịch vụ
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30)); // Phần thông tin chi tiết
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 65)); // Bảng danh mục dịch vụ
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 35)); // Phần thông tin chi tiết
         // Bảng danh mục
         serviceGrid.Dock = DockStyle.Fill;
         serviceGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;

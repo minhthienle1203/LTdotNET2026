@@ -13,7 +13,7 @@ using HotelManagement.WinForms.Forms.Reservations;
 using HotelManagement.WinForms.Forms.Rooms;
 using HotelManagement.WinForms.Forms.Services;
 using HotelManagement.WinForms.Forms.Stays;
-
+using HotelManagement.WinForms.Forms.CheckIn;
 namespace HotelManagement.WinForms;
 
 internal static class Program
@@ -53,6 +53,12 @@ internal static class Program
             var hotelServiceService = new HotelServiceService(hotelServiceRepository);
             var invoiceRepository = new InvoiceRepository(connectionFactory);
             var invoiceService = new InvoiceService(invoiceRepository);
+            var reportRepository = new ReportRepository(connectionFactory);
+            var reportService = new ReportService(reportRepository);
+            var stayServiceRepository = new StayServiceRepository(connectionFactory);
+            var stayServiceService = new StayServiceService(stayServiceRepository);
+            var checkoutRepository = new CheckoutRepository(connectionFactory);
+            var checkoutService = new CheckoutService(checkoutRepository);
             // tạo một MainForm cố định
 
             var mainForm = new MainForm();
@@ -67,27 +73,62 @@ internal static class Program
             );
             mainForm.RegisterPage("S05", context => new RoomListView(roomService, floorService, mainForm.NavigateToScreen, context));
             mainForm.RegisterPage("S06", context=> new RoomFormView( roomService, floorService ,mainForm.NavigateToScreen, context));
-            mainForm.RegisterPage(
-                "S07",
-                _ => new CustomersListView(mainForm.NavigateToScreen)
-            );
+            var customerRepository = new CustomerRepository(connectionFactory);
+            var customerService = new CustomerService(customerRepository);
+            mainForm.RegisterPage("S07",
+                _ => new CustomersListView(mainForm.NavigateToScreen, customerService.SearchCustomers));
             mainForm.RegisterPage(
                 "S08",
-                param => param switch
+                param =>
                 {
-                    Customer c => new CustomerFormView(mainForm.NavigateToScreen, c),
-                    CustomerFormContext ctx => new CustomerFormView(mainForm.NavigateToScreen, null, ctx),
-                    _ => new CustomerFormView(mainForm.NavigateToScreen)
+                    Customer? customer = param as Customer;
+                    CustomerFormContext? ctx = param as CustomerFormContext;
+                    bool isNew = customer is null || customer.CustomerId == 0;
+
+                    return new CustomerFormView(
+                        mainForm.NavigateToScreen,
+                        customer,
+                        ctx,
+                        customerService.Save,
+                        id => customerService.IsIdentityDuplicate(id, isNew ? null : customer!.CustomerId),
+                        isNew ? customerService.GetSuggestedCode() : null);
                 }
             );
+            var reservationService = new ReservationService(
+                new ReservationRepository(connectionFactory));
+
+
+
             mainForm.RegisterPage(
                 "S09",
-                ctx => new ReservationListView(mainForm.NavigateToScreen, ctx)
+                ctx => new ReservationListView(mainForm.NavigateToScreen, reservationService, ctx)
             );
             mainForm.RegisterPage(
                 "S10",
-                ctx => new ReservationFormView(mainForm.NavigateToScreen, ctx)
+                ctx => new ReservationFormView(mainForm.NavigateToScreen, reservationService, ctx)
             );
+            mainForm.RegisterPage(
+                "S11",
+                _ =>
+                {
+                    var repository = new CheckInRepository(connectionFactory.CreateConnection);
+                    var view = new CheckInView(new CheckInService(repository));
+                    view.CurrentStaysRequested += (_, _) => mainForm.NavigateToScreen("S12");
+                    view.RoomMapRequested += (_, _) => mainForm.NavigateToScreen("S01");
+                    return view;
+                });
+            mainForm.RegisterPage(
+                "S12",
+                _ =>
+                {
+                    var repository = new ActiveStayRepository(connectionFactory.CreateConnection);
+                    var view = new ActiveStaysView(new ActiveStayService(repository));
+                    view.CheckInRequested += (_, _) => mainForm.NavigateToScreen("S11");
+                    view.RoomMapRequested += roomId => mainForm.NavigateToScreen("S01", roomId);
+                    view.AddServiceRequested += stayId => mainForm.NavigateToScreen("S15", stayId);
+                    view.CheckoutRequested += stayId => mainForm.NavigateToScreen("S16", stayId);
+                    return view;
+                });
 
 
             // Đăng kí trang dichj vụ
@@ -98,12 +139,17 @@ internal static class Program
             // Đăng kí trang ghi nhận dịch vụ
             mainForm.RegisterPage(
                 "S15",
-                _ => new ServiceUsageView(mainForm.NavigateToScreen, hotelServiceService)
+                context =>
+                {
+                    var view = new ServiceUsageView(mainForm.NavigateToScreen, hotelServiceService, stayServiceService);
+                    view.SetStayContext((int)context!);
+                    return view;
+                }
             );
             // Đăng kí trang checkout
             mainForm.RegisterPage(
                 "S16",
-                _ => new CheckOutView(mainForm.NavigateToScreen)
+                context => new CheckOutView(mainForm.NavigateToScreen, checkoutService, (int)context!)
             );
             // Đăng kí trang hóa đơn
             mainForm.RegisterPage(
@@ -114,7 +160,7 @@ internal static class Program
             mainForm.RegisterPage("S19", _=> new HousekeepingView(roomService, mainForm.NavigateToScreen));
 
             //đăng kí trang báo cáo tháng
-            mainForm.RegisterPage("S20", _=> new MonthlyReportView(mainForm.NavigateToScreen));
+            mainForm.RegisterPage("S20", _=> new MonthlyReportView(reportService,mainForm.NavigateToScreen));
 
             Application.Run(mainForm);
         }

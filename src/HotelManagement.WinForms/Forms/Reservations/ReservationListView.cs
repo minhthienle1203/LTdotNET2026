@@ -1,13 +1,15 @@
 ﻿using System.Drawing;
 using System.Windows.Forms;
+using HotelManagement.Core.DTOs;
 using HotelManagement.Core.Enums;
+using HotelManagement.Core.Exceptions;
+using HotelManagement.Core.Services;
 
 namespace HotelManagement.WinForms.Forms.Reservations;
-
 public sealed class ReservationListView : UserControl
 {
     private readonly Action<string, object?> navigate;
-    private readonly List<ReservationItem> allItems;
+    private readonly ReservationService reservationService;
 
     private readonly BindingSource bindingSource = new();
     private readonly DataGridView grid = new();
@@ -23,11 +25,10 @@ public sealed class ReservationListView : UserControl
     private readonly Button checkInButton = new();
     private readonly Button editButton = new();
     private readonly Button cancelButton = new();
-
-    public ReservationListView(Action<string, object?> navigate, object? context = null)
+    public ReservationListView(Action<string, object?> navigate, ReservationService reservationService, object? context = null)
     {
         this.navigate = navigate ?? throw new ArgumentNullException(nameof(navigate));
-        allItems = LoadReservations();
+        this.reservationService = reservationService ?? throw new ArgumentNullException(nameof(reservationService));
 
         Dock = DockStyle.Fill;
         Padding = new Padding(12);
@@ -49,10 +50,8 @@ public sealed class ReservationListView : UserControl
         bindingSource.CurrentChanged += (_, _) => ShowDetail();
 
         InitializeFilters();
-        ApplyFilter(context is int reservationId ? reservationId : null);
+        LoadData(context is int reservationId ? reservationId : null);
     }
-
-
     private Control BuildHeader()
     {
         var panel = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
@@ -64,7 +63,7 @@ public sealed class ReservationListView : UserControl
             Margin = new Padding(0, 5, 16, 0)
         });
         panel.Controls.Add(CreateButton("Tạo đặt phòng mới", () => navigate("S10", null)));
-        panel.Controls.Add(CreateButton("Làm mới", () => ApplyFilter()));
+        panel.Controls.Add(CreateButton("Làm mới", () => LoadData()));
         return panel;
     }
 
@@ -84,7 +83,6 @@ public sealed class ReservationListView : UserControl
             };
             panel.Controls.Add(summaryLabels[i], i, 0);
         }
-
         return panel;
     }
 
@@ -98,9 +96,8 @@ public sealed class ReservationListView : UserControl
         {
             if (e.KeyCode != Keys.Enter) return;
             e.SuppressKeyPress = true;
-            ApplyFilter();
+            LoadData();
         };
-
         ConfigureDatePicker(fromPicker);
         ConfigureDatePicker(toPicker);
 
@@ -119,7 +116,7 @@ public sealed class ReservationListView : UserControl
         panel.Controls.Add(roomTypeBox);
         panel.Controls.Add(CreateLabel("Trạng thái"));
         panel.Controls.Add(statusBox);
-        panel.Controls.Add(CreateButton("Lọc dữ liệu", () => ApplyFilter()));
+        panel.Controls.Add(CreateButton("Lọc dữ liệu", () => LoadData()));
         panel.Controls.Add(CreateButton("Xóa lọc", ClearFilters));
         return panel;
     }
@@ -148,14 +145,14 @@ public sealed class ReservationListView : UserControl
         grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
         grid.BackgroundColor = SystemColors.Window;
 
-        AddColumn("Mã đặt phòng", nameof(ReservationItem.ReservationCode));
-        AddColumn("Khách hàng", nameof(ReservationItem.CustomerName));
-        AddColumn("Ngày giờ đến", nameof(ReservationItem.ExpectedCheckIn), "dd/MM/yyyy HH:mm");
-        AddColumn("Ngày giờ đi", nameof(ReservationItem.ExpectedCheckOut), "dd/MM/yyyy HH:mm");
-        AddColumn("Loại phòng", nameof(ReservationItem.RoomTypeName));
-        AddColumn("Phòng được gán", nameof(ReservationItem.RoomText));
-        AddColumn("Tiền cọc", nameof(ReservationItem.DepositAmount), "N0");
-        AddColumn("Trạng thái", nameof(ReservationItem.StatusText));
+        AddColumn("Mã đặt phòng", nameof(ReservationListItemDto.ReservationCode));
+        AddColumn("Khách hàng", nameof(ReservationListItemDto.CustomerName));
+        AddColumn("Ngày giờ đến", nameof(ReservationListItemDto.ExpectedCheckIn), "dd/MM/yyyy HH:mm");
+        AddColumn("Ngày giờ đi", nameof(ReservationListItemDto.ExpectedCheckOut), "dd/MM/yyyy HH:mm");
+        AddColumn("Loại phòng", nameof(ReservationListItemDto.RoomTypeName));
+        AddColumn("Phòng được gán", nameof(ReservationListItemDto.RoomText));
+        AddColumn("Tiền cọc", nameof(ReservationListItemDto.DepositAmount), "N0");
+        AddColumn("Trạng thái", nameof(ReservationListItemDto.StatusText));
 
         grid.DataSource = bindingSource;
         grid.CellDoubleClick += (_, e) =>
@@ -167,8 +164,7 @@ public sealed class ReservationListView : UserControl
 
     private Control BuildDetailPanel()
     {
-        var panel = new TableLayoutPanel
-            { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Margin = new Padding(8, 0, 0, 0) };
+        var panel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Margin = new Padding(8, 0, 0, 0) };
         panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
 
@@ -219,71 +215,59 @@ public sealed class ReservationListView : UserControl
         button.Click += (_, _) => onClick();
         return button;
     }
-
-
-
-    private List<ReservationItem> LoadReservations()
-    {
-        return CreateSampleReservations();
-    }
-
-    private static List<ReservationItem> CreateSampleReservations() => new()
-    {
-        new(1, "RSV-202611-001", "Nguyễn Hoàng", "0901000001", new DateTime(2026, 11, 16, 14, 0, 0), new DateTime(2026, 11, 17, 12, 0, 0), "Deluxe", "103", 100000, ReservationStatus.Confirmed, "Đặt trước phòng 103"),
-        new(2, "RSV-202611-002", "Trần Quốc Bảo", "0901000002", new DateTime(2026, 11, 18, 14, 0, 0), new DateTime(2026, 11, 19, 12, 0, 0), "Deluxe", "203", 150000, ReservationStatus.Confirmed, "Đặt trước phòng 203"),
-        new(3, "RSV-202611-003", "Lê Thu Hà", "0901000003", new DateTime(2026, 11, 20, 14, 0, 0), new DateTime(2026, 11, 21, 12, 0, 0), "Deluxe", "303", 100000, ReservationStatus.Confirmed, "Đặt trước phòng 303"),
-        new(4, "RSV-202611-004", "Trần Quốc Bảo", "0901000002", new DateTime(2026, 11, 22, 9, 0, 0), new DateTime(2026, 11, 23, 12, 0, 0), "Standard", null, 0, ReservationStatus.Confirmed, "Chỉ giữ chỗ theo loại phòng"),
-        new(5, "RSV-202611-005", "Nguyễn Hoàng", "0901000001", new DateTime(2026, 11, 10, 14, 0, 0), new DateTime(2026, 11, 12, 12, 0, 0), "Standard", "102", 200000, ReservationStatus.CheckedIn, null),
-        new(6, "RSV-202611-006", "Lê Thu Hà", "0901000003", new DateTime(2026, 11, 5, 14, 0, 0), new DateTime(2026, 11, 7, 12, 0, 0), "Deluxe", "104", 0, ReservationStatus.Completed, null),
-        new(7, "RSV-202611-007", "Trần Quốc Bảo", "0901000002", new DateTime(2026, 11, 8, 14, 0, 0), new DateTime(2026, 11, 9, 12, 0, 0), "Standard", null, 0, ReservationStatus.Cancelled, "Khách hủy")
-    };
-
     private void InitializeFilters()
     {
-        roomTypeBox.Items.AddRange(new object[] { "Tất cả loại phòng", "Standard", "Deluxe" });
-        roomTypeBox.SelectedIndex = 0;
-
         statusBox.Items.AddRange(new object[]
         {
             "Tất cả trạng thái", "Đã xác nhận", "Đã nhận phòng", "Hoàn tất", "Đã hủy", "Không đến"
         });
         statusBox.SelectedIndex = 0;
+
+        try
+        {
+            var roomTypes = new List<RoomTypeOptionDto> { new() { RoomTypeId = 0, TypeName = "Tất cả loại phòng" } };
+            roomTypes.AddRange(reservationService.GetRoomTypeOptions(false));
+
+            roomTypeBox.DisplayMember = nameof(RoomTypeOptionDto.TypeName);
+            roomTypeBox.ValueMember = nameof(RoomTypeOptionDto.RoomTypeId);
+            roomTypeBox.DataSource = roomTypes;
+        }
+        catch (Exception ex)
+        {
+            ShowError("Không tải được danh sách loại phòng.", ex);
+        }
     }
-    private void ApplyFilter(int? selectId = null)
+
+    private ReservationFilter BuildFilter() => new()
+    {
+        Keyword = string.IsNullOrWhiteSpace(keywordBox.Text) ? null : keywordBox.Text.Trim(),
+        FromDate = fromPicker.Checked ? fromPicker.Value.Date : null,
+        ToDate = toPicker.Checked ? toPicker.Value.Date : null,
+        RoomTypeId = roomTypeBox.SelectedValue is int typeId && typeId > 0 ? typeId : null,
+        Status = statusBox.SelectedIndex > 0 ? (ReservationStatus)(statusBox.SelectedIndex - 1) : null
+    };
+    private void LoadData(int? selectId = null)
     {
         var keepId = selectId ?? Selected?.ReservationId;
 
-        if (fromPicker.Checked && toPicker.Checked && fromPicker.Value.Date > toPicker.Value.Date)
+        try
         {
-            MessageBox.Show(this, "'Ngày đến từ' không được lớn hơn 'đến'.", "Bộ lọc không hợp lệ",
-                MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return;
+            var list = reservationService.SearchReservations(BuildFilter());
+            bindingSource.DataSource = list;
+            UpdateSummary(list);
+
+            var index = keepId.HasValue ? list.FindIndex(x => x.ReservationId == keepId.Value) : -1;
+            if (index >= 0) bindingSource.Position = index;
+            ShowDetail();
         }
-
-        var keyword = keywordBox.Text.Trim();
-        var query = allItems.AsEnumerable();
-
-        if (keyword.Length > 0)
-            query = query.Where(x =>
-                x.ReservationCode.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
-                x.CustomerName.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
-                x.CustomerPhone.Contains(keyword));
-        if (fromPicker.Checked)
-            query = query.Where(x => x.ExpectedCheckIn.Date >= fromPicker.Value.Date);
-        if (toPicker.Checked)
-            query = query.Where(x => x.ExpectedCheckIn.Date <= toPicker.Value.Date);
-        if (roomTypeBox.SelectedIndex > 0)
-            query = query.Where(x => x.RoomTypeName == roomTypeBox.Text);
-        if (statusBox.SelectedIndex > 0)
-            query = query.Where(x => x.Status == (ReservationStatus)(statusBox.SelectedIndex - 1));
-
-        var list = query.OrderBy(x => x.ExpectedCheckIn).ToList();
-        bindingSource.DataSource = list;
-        UpdateSummary(list);
-
-        var index = keepId.HasValue ? list.FindIndex(x => x.ReservationId == keepId.Value) : -1;
-        if (index >= 0) bindingSource.Position = index;
-        ShowDetail();
+        catch (BusinessRuleException ex)
+        {
+            MessageBox.Show(this, ex.Message, "Bộ lọc không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+        catch (Exception ex)
+        {
+            ShowError("Không tải được danh sách đặt phòng.", ex);
+        }
     }
 
     private void ClearFilters()
@@ -293,10 +277,10 @@ public sealed class ReservationListView : UserControl
         toPicker.Checked = false;
         roomTypeBox.SelectedIndex = 0;
         statusBox.SelectedIndex = 0;
-        ApplyFilter();
+        LoadData();
     }
 
-    private void UpdateSummary(List<ReservationItem> list)
+    private void UpdateSummary(List<ReservationListItemDto> list)
     {
         var confirmed = list.Where(x => x.Status == ReservationStatus.Confirmed).ToList();
 
@@ -307,7 +291,7 @@ public sealed class ReservationListView : UserControl
         summaryLabels[4].Text = $"Tiền cọc đang giữ\n{confirmed.Sum(x => x.DepositAmount):N0} đ";
     }
 
-    private ReservationItem? Selected => bindingSource.Current as ReservationItem;
+    private ReservationListItemDto? Selected => bindingSource.Current as ReservationListItemDto;
 
     private void ShowDetail()
     {
@@ -321,6 +305,11 @@ public sealed class ReservationListView : UserControl
             return;
         }
 
+        var hours = item.TotalHours;
+        var days = item.TotalDays;
+        var byHour = item.RoomAmountByHour;
+        var byDay = item.RoomAmountByDay;
+
         detailLabel.Text =
             $"Mã đặt phòng: {item.ReservationCode}\n" +
             $"Trạng thái: {item.StatusText}\n\n" +
@@ -330,7 +319,11 @@ public sealed class ReservationListView : UserControl
             $"Dự kiến đi: {item.ExpectedCheckOut:dd/MM/yyyy HH:mm}\n\n" +
             $"Loại phòng: {item.RoomTypeName}\n" +
             $"Phòng được gán: {item.RoomText}\n" +
-            $"Tiền cọc: {item.DepositAmount:N0} đ\n\n" +
+            $"Thời gian: {hours} giờ ({days} ngày)\n" +
+            $"Tổng tiền phòng nếu tính theo giờ: {byHour:N0} đ\n" +
+            $"Tổng tiền phòng nếu tính theo ngày: {byDay:N0} đ\n" +
+            $"Tiền cọc: {item.DepositAmount:N0} đ\n" +
+            $"Còn lại (tính theo ngày): {Math.Max(0, byDay - item.DepositAmount):N0} đ\n\n" +
             $"Ghi chú: {item.Note}";
 
         var isConfirmed = item.Status == ReservationStatus.Confirmed;
@@ -350,6 +343,7 @@ public sealed class ReservationListView : UserControl
         if (Selected == null) return;
         navigate("S11", Selected.ReservationId);
     }
+
     private void CancelSelected()
     {
         var item = Selected;
@@ -359,35 +353,24 @@ public sealed class ReservationListView : UserControl
             $"Hủy đặt phòng {item.ReservationCode} của khách {item.CustomerName}?",
             "Xác nhận hủy", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
         if (answer != DialogResult.Yes) return;
-        var index = allItems.FindIndex(x => x.ReservationId == item.ReservationId);
-        allItems[index] = item with { Status = ReservationStatus.Cancelled };
-        ApplyFilter(item.ReservationId);
-    }
 
-    public sealed record ReservationItem(
-        int ReservationId,
-        string ReservationCode,
-        string CustomerName,
-        string CustomerPhone,
-        DateTime ExpectedCheckIn,
-        DateTime ExpectedCheckOut,
-        string RoomTypeName,
-        string? RoomCode,
-        decimal DepositAmount,
-        ReservationStatus Status,
-        string? Note)
-    {
-        public string RoomText => RoomCode ?? "(Chưa gán - giữ theo loại)";
-
-        public string StatusText => Status switch
+        try
         {
-            ReservationStatus.Confirmed => "Đã xác nhận",
-            ReservationStatus.CheckedIn => "Đã nhận phòng",
-            ReservationStatus.Completed => "Hoàn tất",
-            ReservationStatus.Cancelled => "Đã hủy",
-            ReservationStatus.NoShow => "Không đến",
-            _ => Status.ToString()
-        };
+            reservationService.CancelReservation(item.ReservationId);
+            LoadData(item.ReservationId);
+        }
+        catch (BusinessRuleException ex)
+        {
+            MessageBox.Show(this, ex.Message, "Không thể hủy", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+        catch (Exception ex)
+        {
+            ShowError("Hủy đặt phòng thất bại.", ex);
+        }
     }
 
+    private void ShowError(string message, Exception ex)
+    {
+        MessageBox.Show(this, $"{message}\n{ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
 }
