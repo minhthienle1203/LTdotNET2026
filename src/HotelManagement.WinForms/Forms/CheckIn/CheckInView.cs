@@ -126,7 +126,6 @@ public sealed class CheckInView : UserControl
             Dock = DockStyle.Top, AutoSize = true, FlowDirection = FlowDirection.TopDown,
             WrapContents = false, BackColor = Color.White, Padding = new Padding(12, 8, 12, 6)
         };
-        header.Controls.Add(new Label { Text = "5. LỄ TÂN  ›  S11 - NHẬN PHÒNG (CHECK-IN)", AutoSize = true, ForeColor = Blue, Font = Bold(8.5f) });
         header.Controls.Add(new Label { Text = "Tiếp Nhận && Bàn Giao Phòng Lưu Trú", AutoSize = true, Font = Bold(13) });
 
         var btnMap = MakeButton("  Sơ đồ phòng (S01)", Pale, Navy);
