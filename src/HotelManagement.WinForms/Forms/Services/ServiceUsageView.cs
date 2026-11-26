@@ -16,17 +16,29 @@ public sealed class ServiceUsageView : UserControl
     private readonly Action<string, object?> navigate;
     private List<ServiceItem> services;
     private readonly HotelServiceService ServiceCatalog;
+    private readonly StayServiceService _stayServiceService;
+    private int _currentStayId;
+    private string? _currentRoomCode;
 
     // Các thành phần giao diện
     private readonly TextBox SearchBox = new();
     private readonly ComboBox ServiceBox = new();
     private readonly ComboBox StatusBox = new();
     private readonly DataGridView serviceGrid = new();
+    private readonly DataGridView usedServiceGrid = new();
     private readonly TableLayoutPanel ThongKePanel = new();
     private readonly Label serviceCount = new();
     private readonly Label serviceDetails = new();
-    private readonly NumericUpDown quantityInput = new() { Minimum = 1, Maximum = 999, Value = 1, Width = 65 };
+    private readonly Label targetStayLabel = new()
+    {
+        Text = "Chưa chọn lượt lưu trú (Stay)",
+        AutoSize = true,
+        Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+        Margin = new Padding(16, 6, 0, 0)
+    };
+    private readonly NumericUpDown quantityInput = new() { Minimum = 1, Maximum = 999, Value = 1, Width = 65,DecimalPlaces = 0 };
     private readonly Button btnRecord = new() { Text = "THÊM", Width = 75, Height = 40, Font = new Font("Segoe UI", 8, FontStyle.Bold)};
+    private readonly Button btnRemove = new() { Text = "XÓA", Width = 75, Height = 40, Font = new Font("Segoe UI", 8, FontStyle.Bold), Enabled = false }; // [THÊM] Nút xóa dịch vụ đã dùng
     private readonly Label totalAmountLabel = new()
     {
         Text = "Tổng tiền: 0đ",
@@ -41,10 +53,11 @@ public sealed class ServiceUsageView : UserControl
     };
     private ServiceItem? selectedService;
 
-    public ServiceUsageView(Action<string, object?> navigate, HotelServiceService serviceServiceCatalog)
+    public ServiceUsageView(Action<string, object?> navigate, HotelServiceService serviceServiceCatalog, StayServiceService stayServiceService)
     {
         this.navigate = navigate ?? throw new ArgumentNullException(nameof(navigate));
         ServiceCatalog = serviceServiceCatalog ?? throw new ArgumentNullException(nameof(serviceServiceCatalog));
+        _stayServiceService = stayServiceService ?? throw new ArgumentNullException(nameof(stayServiceService));
         Dock = DockStyle.Fill;
         Padding = new Padding(12);
         AutoScroll = true;
@@ -69,9 +82,30 @@ public sealed class ServiceUsageView : UserControl
         layout.Controls.Add(serviceCount, 0, 3);
         layout.Controls.Add(BuildArea(), 0, 4);
         Controls.Add(layout);
-        Filter();
+        ConfigureUsedServiceGrid(); // Cấu hình cột và sự kiện cho usedServiceGrid
         LoadServices();
+        Filter();
         RefreshData();
+        ReloadUsedServices(); // Tải danh sách đã dùng
+    }
+    public void SetStayContext(int stayId, string? roomCode = null)
+    {
+        _currentStayId = stayId;
+        _currentRoomCode = string.IsNullOrWhiteSpace(roomCode) ? null : roomCode.Trim();
+        if (_currentStayId > 0)
+        {
+            targetStayLabel.Text = _currentRoomCode != null
+                ? $"Đang ghi cho: Phòng {_currentRoomCode} (Stay #{_currentStayId})"
+                : $"Đang ghi cho: Stay #{_currentStayId}";
+            btnRecord.Enabled = true;
+        }
+        else
+        {
+            targetStayLabel.Text = "Chưa chọn lượt lưu trú (Stay)";
+            btnRecord.Enabled = false;
+            btnRemove.Enabled = false;
+        }
+        ReloadUsedServices();
     }
 
     private void LoadServices()
@@ -105,6 +139,7 @@ private static string ToCategoryText(ServiceCategory category) => category switc
             AutoSize = true,
             Font = new Font("Segoe UI", 15, FontStyle.Bold),
         });
+        panel.Controls.Add(targetStayLabel);
         return panel;
     }
     //  Các ô thoongs kê
@@ -146,8 +181,13 @@ private static string ToCategoryText(ServiceCategory category) => category switc
     private Control BuildArea()
     {
         var panel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1 };
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 70)); // Bảng danh mục dịch vụ
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30)); // Phần thông tin chi tiết
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 65)); // Bảng danh mục dịch vụ
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 35)); // Phần thông tin chi tiết
+        var leftPanel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3 };
+        leftPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        leftPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 58));
+        leftPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 26));
+        leftPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 42));
         // Bảng danh mục
         serviceGrid.Dock = DockStyle.Fill;
         serviceGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
@@ -155,35 +195,157 @@ private static string ToCategoryText(ServiceCategory category) => category switc
         serviceGrid.ReadOnly = true;
         serviceGrid.MultiSelect = false;
         serviceGrid.SelectionChanged += (_, _) => ServiceSelected();
-        panel.Controls.Add(serviceGrid, 0, 0);
+        leftPanel.Controls.Add(serviceGrid, 0, 0);
+        var usedHeaderRow = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            WrapContents = false,
+            Margin = new Padding(0)
+        };
+        usedHeaderRow.Controls.Add(new Label
+        {
+            Text = "DỊCH VỤ ĐÃ GHI NHẬN CHO LƯỢT LƯU TRÚ",
+            AutoSize = true,
+            Margin = new Padding(0, 5, 10, 0),
+            Font = new Font("Segoe UI", 9f, FontStyle.Bold)
+        });
+        btnRemove.Width = 65;
+        btnRemove.Height = 22;
+        btnRemove.Font = new Font("Segoe UI", 8, FontStyle.Bold);
+        btnRemove.Margin = new Padding(0, 1, 0, 0);
+        usedHeaderRow.Controls.Add(btnRemove);
+        leftPanel.Controls.Add(usedHeaderRow, 0, 1);
+        leftPanel.Controls.Add(usedServiceGrid, 0, 2); // Đặt usedServiceGrid vào ô (0, 2) lefPanel
+        panel.Controls.Add(leftPanel, 0, 0); // Đưa leftPanel vào ô (0, 0) của panel chính
         // Phần thông tin
         var detailsPanel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Padding = new Padding(8) };
-        detailsPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 75));
-        detailsPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+        detailsPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        detailsPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 55));
         serviceDetails.Dock = DockStyle.Fill;
         serviceDetails.Font = new Font("Segoe UI", 9.5f);
         serviceDetails.Text = "Chọn một dịch vụ từ danh sách";
         detailsPanel.Controls.Add(serviceDetails, 0, 0);
-        var actionRow = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
+        var actionRow = new FlowLayoutPanel { Dock = DockStyle.Fill,WrapContents = true, AutoScroll = true };
         actionRow.Controls.Add(new Label { Text = "Số Lượng:", AutoSize = true, Margin = new Padding(0, 6, 4, 0) });
         quantityInput.ValueChanged += (_, _) => UpdateTotalAmount();
         actionRow.Controls.Add(quantityInput);
         actionRow.Controls.Add(totalAmountLabel);
         btnRecord.Margin = new Padding(8, 0, 0, 0);
+        //Xử lý sự kiện button
         btnRecord.Click += (_, _) =>
         {
-            if (selectedService == null)
+            if (_currentStayId <= 0)
             {
-                MessageBox.Show("Vui lòng chọn một dịch vụ");
+                MessageBox.Show("Vui lòng chọn một phòng đang có khách trước khi ghi dịch vụ.");
                 return;
             }
-            MessageBox.Show($"Đã ghi nhận dịch vụ {(int)quantityInput.Value}x {selectedService.ServiceName}");
+            if (selectedService == null)
+            {
+                MessageBox.Show("Vui lòng chọn một dịch vụ.");
+                return;
+            }
+
+            if (!selectedService.IsActive)
+            {
+                MessageBox.Show("Dịch vụ này đang ngừng cung cấp, không thể ghi nhận.");
+                return;
+            }
+            try
+            {
+                int qty = (int)quantityInput.Value;
+                _stayServiceService.AddServiceToStay(
+                    stayId: _currentStayId,
+                    serviceId: selectedService.ServiceId,
+                    quantity: qty,
+                    unitPrice: selectedService.UnitPrice,
+                    usedAt: DateTime.Now,
+                    note: _currentRoomCode != null ? $"Phòng {_currentRoomCode}" : null
+                );
+                var total = selectedService.UnitPrice * qty;
+                MessageBox.Show($"Đã ghi nhận {qty}x {selectedService.ServiceName} ({total:N0}đ) cho Stay #{_currentStayId}.");
+                quantityInput.Value = 1;
+                ReloadUsedServices();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Không thể lưu dịch vụ: {ex.Message}");
+            }
         };
         actionRow.Controls.Add(btnRecord);
+        btnRemove.Margin = new Padding(6, 0, 0, 0);
+        btnRemove.Click += (_, _) => // Xử lý sự kiện xóa dịch vụ đã ghi nhận
+        {
+            if (_currentStayId <= 0)
+            {
+                MessageBox.Show("Vui lòng chọn lượt lưu trú trước khi xóa dịch vụ.");
+                return;
+            }
+            if (usedServiceGrid.CurrentRow?.DataBoundItem is not UsedServiceRow selectedRow)
+            {
+                MessageBox.Show("Vui lòng chọn dịch vụ đã ghi nhận cần xóa.");
+                return;
+            }
+            var confirm = MessageBox.Show(
+                $"Xóa dịch vụ \"{selectedRow.ServiceName}\" (SL: {selectedRow.Quantity:0.###}, Thành tiền: {selectedRow.Amount:N0}đ)?",
+                "Xác nhận xóa",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+            if (confirm != DialogResult.Yes)
+                return;
+            try
+            {
+                _stayServiceService.RemoveServiceFromStay(selectedRow.StayServiceId);
+                ReloadUsedServices();
+                MessageBox.Show("Đã xóa dịch vụ.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Không thể xóa dịch vụ: {ex.Message}");
+            }
+        };
         detailsPanel.Controls.Add(actionRow, 0, 1);
         panel.Controls.Add(detailsPanel, 1, 0);
         return panel;
     }
+
+    private void ConfigureUsedServiceGrid() // Làm bảng dịch vụ đã dùng
+    {
+        usedServiceGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+        usedServiceGrid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+        usedServiceGrid.ReadOnly = true;
+        usedServiceGrid.MultiSelect = false;
+        usedServiceGrid.AutoGenerateColumns = false;
+        usedServiceGrid.ColumnHeadersDefaultCellStyle.Font = new Font(usedServiceGrid.Font, FontStyle.Bold);
+        usedServiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "ServiceName", HeaderText = "Dịch Vụ" });
+        usedServiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "QuantityDisplay", HeaderText = "SL" });
+        usedServiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "UnitPriceDisplay", HeaderText = "Đơn Giá" });
+        usedServiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "AmountDisplay", HeaderText = "Thành Tiền" });
+        usedServiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "UsedAtDisplay", HeaderText = "Thời Gian" });
+        usedServiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "Note", HeaderText = "Ghi Chú" });
+    }
+    private void ReloadUsedServices() // Tải lại danh sách dịch vụ đã dùng của _currentStayId
+    {
+        if (_currentStayId <= 0)
+        {
+            usedServiceGrid.DataSource = null;
+            btnRemove.Enabled = false;
+            return;
+        }
+        var serviceLookup = services?.ToDictionary(s => s.ServiceId, s => s.ServiceName) ?? new Dictionary<int, string>();
+        IReadOnlyList<StayService> usedItems = _stayServiceService.GetByStayId(_currentStayId);
+        var rows = usedItems.Select(item => new UsedServiceRow(
+            item.StayServiceId,
+            serviceLookup.TryGetValue(item.ServiceId, out var name) ? name : $"Dịch vụ #{item.ServiceId}",
+            item.Quantity,
+            item.UnitPrice,
+            item.Amount,
+            item.UsedAt,
+            item.Note
+        )).ToList();
+        usedServiceGrid.DataSource = rows;
+        btnRemove.Enabled = rows.Count > 0;
+    }
+
     private void Filter()
     {
         ServiceBox.Items.Add("Tất cả nhóm");
@@ -291,4 +453,18 @@ private static string ToCategoryText(ServiceCategory category) => category switc
         public string UnitPriceDisplay => UnitPrice.ToString("N0") + "đ";
     }
 
+    private sealed record UsedServiceRow( // Dòng dữ liệu hiển thị cho bảng dịch vụ đã dùng
+        int StayServiceId,
+        string ServiceName,
+        decimal Quantity,
+        decimal UnitPrice,
+        decimal Amount,
+        DateTime UsedAt,
+        string? Note)
+    {
+        public string QuantityDisplay => Quantity.ToString("0");
+        public string UnitPriceDisplay => UnitPrice.ToString("N0") + "đ";
+        public string AmountDisplay => Amount.ToString("N0") + "đ";
+        public string UsedAtDisplay => UsedAt.ToString("dd/MM/yyyy HH:mm");
+    }
 }
