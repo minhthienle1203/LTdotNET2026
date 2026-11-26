@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
+using HotelManagement.Core.Entities;
+using HotelManagement.Core.Services;
 
 namespace HotelManagement.WinForms.Forms.Stays;
 
@@ -9,6 +11,15 @@ namespace HotelManagement.WinForms.Forms.Stays;
 public sealed class CheckOutView : UserControl
 {
     private readonly Action<string, object?> navigate;
+    private readonly CheckoutService checkoutService;
+    private readonly int stayId;
+    private Stay? currentStay;
+    private Room? currentRoom;
+    private string customerName = "---";
+    private decimal depositAmount;
+    private decimal serviceCharge;
+    private decimal roomCharge;
+    private int? createdInvoiceId;
     private readonly Label lblStayInfo = new()
     {
         AutoSize = true,
