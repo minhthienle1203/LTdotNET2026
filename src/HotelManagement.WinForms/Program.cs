@@ -13,7 +13,7 @@ using HotelManagement.WinForms.Forms.Reservations;
 using HotelManagement.WinForms.Forms.Rooms;
 using HotelManagement.WinForms.Forms.Services;
 using HotelManagement.WinForms.Forms.Stays;
-
+using HotelManagement.WinForms.Forms.CheckIn;
 namespace HotelManagement.WinForms;
 
 internal static class Program
@@ -97,6 +97,16 @@ internal static class Program
                 "S10",
                 ctx => new ReservationFormView(mainForm.NavigateToScreen, ctx)
             );
+            mainForm.RegisterPage(
+                "S11",
+                _ =>
+                {
+                    var repository = new CheckInRepository(connectionFactory.CreateConnection);
+                    var view = new CheckInView(new CheckInService(repository));
+                    view.CurrentStaysRequested += (_, _) => mainForm.NavigateToScreen("S12");
+                    view.RoomMapRequested += (_, _) => mainForm.NavigateToScreen("S01");
+                    return view;
+                });
 
 
             // Đăng kí trang dichj vụ
