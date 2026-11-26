@@ -65,7 +65,6 @@ public sealed class ServiceUsageView : UserControl
         var layout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            AutoSize = true,
             ColumnCount = 1,
             RowCount = 5
         };
@@ -215,6 +214,7 @@ private static string ToCategoryText(ServiceCategory category) => category switc
         btnRemove.Margin = new Padding(0, 1, 0, 0);
         usedHeaderRow.Controls.Add(btnRemove);
         leftPanel.Controls.Add(usedHeaderRow, 0, 1);
+        usedServiceGrid.Dock = DockStyle.Fill;
         leftPanel.Controls.Add(usedServiceGrid, 0, 2); // Đặt usedServiceGrid vào ô (0, 2) lefPanel
         panel.Controls.Add(leftPanel, 0, 0); // Đưa leftPanel vào ô (0, 0) của panel chính
         // Phần thông tin
@@ -316,12 +316,12 @@ private static string ToCategoryText(ServiceCategory category) => category switc
         usedServiceGrid.MultiSelect = false;
         usedServiceGrid.AutoGenerateColumns = false;
         usedServiceGrid.ColumnHeadersDefaultCellStyle.Font = new Font(usedServiceGrid.Font, FontStyle.Bold);
-        usedServiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "ServiceName", HeaderText = "Dịch Vụ" });
-        usedServiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "QuantityDisplay", HeaderText = "SL" });
-        usedServiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "UnitPriceDisplay", HeaderText = "Đơn Giá" });
-        usedServiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "AmountDisplay", HeaderText = "Thành Tiền" });
-        usedServiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "UsedAtDisplay", HeaderText = "Thời Gian" });
-        usedServiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "Note", HeaderText = "Ghi Chú" });
+        usedServiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "ServiceName", HeaderText = "Dịch Vụ", FillWeight = 130 });
+        usedServiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "QuantityDisplay", HeaderText = "SL", FillWeight = 45 });
+        usedServiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "UnitPriceDisplay", HeaderText = "Đơn Giá", FillWeight = 85 });
+        usedServiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "AmountDisplay", HeaderText = "Thành Tiền", FillWeight = 95 });
+        usedServiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "UsedAtDisplay", HeaderText = "Thời Gian", FillWeight = 110 });
+        usedServiceGrid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "Note", HeaderText = "Ghi Chú", FillWeight = 90 });
     }
     private void ReloadUsedServices() // Tải lại danh sách dịch vụ đã dùng của _currentStayId
     {
