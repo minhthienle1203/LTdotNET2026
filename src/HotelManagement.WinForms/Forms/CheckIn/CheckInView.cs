@@ -10,10 +10,11 @@ namespace HotelManagement.WinForms.Forms.CheckIn;
 
 public sealed class CheckInView : UserControl
 {
-    private static readonly Color Navy = Color.FromArgb(17, 28, 49);
-    private static readonly Color Blue = Color.FromArgb(0, 74, 198);
-    private static readonly Color Pale = Color.FromArgb(236, 242, 252);
-    private static readonly Color Page = Color.FromArgb(246, 248, 252);
+    private static readonly Color Navy = Color.FromArgb(70, 70, 70);
+    private static readonly Color Accent = Color.FromArgb(150, 150, 150);
+    private static readonly Color Blue = Accent;
+    private static readonly Color Pale = Color.FromArgb(242, 242, 242);
+    private static readonly Color Page = Color.White;
     private static readonly Color Green = Color.FromArgb(22, 128, 61);
     private static readonly Color Red = Color.FromArgb(185, 28, 28);
     private static readonly CultureInfo Vi = CultureInfo.GetCultureInfo("vi-VN");
@@ -38,7 +39,7 @@ public sealed class CheckInView : UserControl
     private readonly DataGridView _grid = new();
     private readonly Label _lblBookingState = new() { AutoSize = true, Font = Bold(10), Margin = new Padding(3, 8, 12, 3) };
     private readonly Label _lblBookingDetail = Info("");
-    private readonly Button _btnCancelBooking = MakeButton("Hủy đặt phòng", Color.White, Red);
+    private readonly Button _btnCancelBooking = MakeButton("Hủy đặt phòng", Color.White, Navy);
     private readonly TextBox _txtName = ReadOnlyBox();
     private readonly TextBox _txtIdentity = ReadOnlyBox();
     private readonly TextBox _txtPhone = ReadOnlyBox();
@@ -64,7 +65,7 @@ public sealed class CheckInView : UserControl
         FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoSize = true
     };
     private readonly Label _lblResult = new() { AutoSize = true, MaximumSize = new Size(320, 0), Font = Bold(9.5f) };
-    private readonly Button _btnConfirm = MakeButton("XÁC NHẬN NHẬN PHÒNG  [F10]", Color.Black, Color.White);
+    private readonly Button _btnConfirm = MakeButton("XÁC NHẬN NHẬN PHÒNG  [F10]", Accent, Color.White);
     private readonly Button _btnReset = MakeButton("Hủy bỏ (Esc)", Color.White, Navy);
     private readonly Button _btnPrint = MakeButton("In phiếu nhận phòng", Color.White, Navy);
 
@@ -430,7 +431,7 @@ public sealed class CheckInView : UserControl
         ShowFieldErrors();
 
         _btnConfirm.Enabled = _evaluation?.CanConfirm == true;
-        _btnConfirm.BackColor = _btnConfirm.Enabled ? Color.Black : Color.Silver;
+        _btnConfirm.BackColor = _btnConfirm.Enabled ? Accent : Color.Gainsboro;
         (_lblResult.Text, _lblResult.ForeColor) = _evaluation switch
         {
             null => ("Không thể check-in ở trạng thái này.", Color.DimGray),
@@ -506,7 +507,7 @@ public sealed class CheckInView : UserControl
                      (_btnWalkInMode, _mode == CheckInMode.WalkIn)
                  })
         {
-            button.BackColor = active ? Navy : Pale;
+            button.BackColor = active ? Accent : Pale;
             button.ForeColor = active ? Color.White : Navy;
         }
     }
@@ -649,11 +650,9 @@ public sealed class CheckInView : UserControl
 
     private static Color StatusColor(ReservationStatus status) => status switch
     {
-        ReservationStatus.Confirmed => Color.FromArgb(194, 101, 0),
-        ReservationStatus.CheckedIn => Blue,
-        ReservationStatus.Completed => Green,
-        ReservationStatus.Cancelled => Red,
-        _ => Color.DimGray
+        ReservationStatus.Confirmed => Navy,
+        ReservationStatus.CheckedIn => Navy,
+        _ => Color.Gray
     };
 
     private static Label Info(string value) => new() { Text = value, AutoSize = true, Margin = new Padding(3, 6, 8, 3) };
