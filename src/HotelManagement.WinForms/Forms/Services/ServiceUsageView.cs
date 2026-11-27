@@ -51,6 +51,12 @@ public sealed class ServiceUsageView : UserControl
         "ĐANG CUNG CẤP",
         "NGỪNG CUNG CẤP"
     };
+
+    private readonly LinkLabel navigateStayLink = new()
+    {
+        Text = "← Về trang lưu trú",
+        AutoSize = true,
+    };
     private ServiceItem? selectedService;
 
     public ServiceUsageView(Action<string, object?> navigate, HotelServiceService serviceServiceCatalog, StayServiceService stayServiceService)
@@ -138,6 +144,11 @@ private static string ToCategoryText(ServiceCategory category) => category switc
             AutoSize = true,
             Font = new Font("Segoe UI", 15, FontStyle.Bold),
         });
+        navigateStayLink.LinkClicked += (_, _) =>
+        {
+                navigate("S12", null);
+        };
+        panel.Controls.Add(navigateStayLink);
         panel.Controls.Add(targetStayLabel);
         return panel;
     }
@@ -218,20 +229,52 @@ private static string ToCategoryText(ServiceCategory category) => category switc
         leftPanel.Controls.Add(usedServiceGrid, 0, 2); // Đặt usedServiceGrid vào ô (0, 2) lefPanel
         panel.Controls.Add(leftPanel, 0, 0); // Đưa leftPanel vào ô (0, 0) của panel chính
         // Phần thông tin
-        var detailsPanel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Padding = new Padding(8) };
-        detailsPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        detailsPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 55));
+        var detailsPanel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 2,
+            Padding = new Padding(8)
+        };
+        detailsPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 62));
+        detailsPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 38));
         serviceDetails.Dock = DockStyle.Fill;
         serviceDetails.Font = new Font("Segoe UI", 9.5f);
         serviceDetails.Text = "Chọn một dịch vụ từ danh sách";
         detailsPanel.Controls.Add(serviceDetails, 0, 0);
-        var actionRow = new FlowLayoutPanel { Dock = DockStyle.Fill,WrapContents = true, AutoScroll = true };
-        actionRow.Controls.Add(new Label { Text = "Số Lượng:", AutoSize = true, Margin = new Padding(0, 6, 4, 0) });
+        var actionBox = new GroupBox
+        {
+            Text = "Thao tác",
+            Dock = DockStyle.Fill,
+            Padding = new Padding(8, 12, 8, 8)
+        };
+        var actionLayout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 2
+        };
+        actionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
+        actionLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+        var qtyRow = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            WrapContents = false,
+            Margin = new Padding(0)
+        };
+        qtyRow.Controls.Add(new Label { Text = "Số Lượng:", AutoSize = true, Margin = new Padding(0, 7, 4, 0) });
         quantityInput.ValueChanged += (_, _) => UpdateTotalAmount();
-        actionRow.Controls.Add(quantityInput);
-        actionRow.Controls.Add(totalAmountLabel);
-        btnRecord.Margin = new Padding(8, 0, 0, 0);
-        //Xử lý sự kiện button
+        quantityInput.Margin = new Padding(0, 4, 6, 0);
+        qtyRow.Controls.Add(quantityInput);
+        totalAmountLabel.Margin = new Padding(4, 7, 0, 0);
+        qtyRow.Controls.Add(totalAmountLabel);
+        var buttonRow = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 2, 0, 0)
+        };
+        btnRecord.Size = new Size(85, 32);
+        btnRecord.Margin = new Padding(0);
         btnRecord.Click += (_, _) =>
         {
             if (_currentStayId <= 0)
@@ -244,7 +287,6 @@ private static string ToCategoryText(ServiceCategory category) => category switc
                 MessageBox.Show("Vui lòng chọn một dịch vụ.");
                 return;
             }
-
             if (!selectedService.IsActive)
             {
                 MessageBox.Show("Dịch vụ này đang ngừng cung cấp, không thể ghi nhận.");
@@ -271,9 +313,8 @@ private static string ToCategoryText(ServiceCategory category) => category switc
                 MessageBox.Show($"Không thể lưu dịch vụ: {ex.Message}");
             }
         };
-        actionRow.Controls.Add(btnRecord);
-        btnRemove.Margin = new Padding(6, 0, 0, 0);
-        btnRemove.Click += (_, _) => // Xử lý sự kiện xóa dịch vụ đã ghi nhận
+        buttonRow.Controls.Add(btnRecord);
+        btnRemove.Click += (_, _) =>
         {
             if (_currentStayId <= 0)
             {
@@ -303,7 +344,10 @@ private static string ToCategoryText(ServiceCategory category) => category switc
                 MessageBox.Show($"Không thể xóa dịch vụ: {ex.Message}");
             }
         };
-        detailsPanel.Controls.Add(actionRow, 0, 1);
+        actionLayout.Controls.Add(qtyRow, 0, 0);
+        actionLayout.Controls.Add(buttonRow, 0, 1);
+        actionBox.Controls.Add(actionLayout);
+        detailsPanel.Controls.Add(actionBox, 0, 1);
         panel.Controls.Add(detailsPanel, 1, 0);
         return panel;
     }

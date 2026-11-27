@@ -146,7 +146,7 @@ public class MonthlyReportView : UserControl
 
         var calendarTitle = new Label
         {
-            Text = "Lịch các  ngày trong tháng", Dock = DockStyle.Fill,
+            Text = "Lịch các  ngày trong tháng (Sáng lên nếu là ngày có khách lưu trú)", Dock = DockStyle.Fill,
             Font = new Font("Segoe UI", 9, FontStyle.Regular), TextAlign = ContentAlignment.MiddleLeft
         };
         content.Controls.Add(calendarTitle, 0, 2);

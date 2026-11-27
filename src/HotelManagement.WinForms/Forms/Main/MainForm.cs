@@ -133,9 +133,9 @@ public sealed class MainForm : Form
 
         CurrentScreenCode = code;
         CurrentScreenTitle = title;
-        _pageTitle.Text = $"{code} - {title}";
-        _footerText.Text = $"Đang mở: {code} - {title}     |     CSDL: Chưa tích hợp";
-        Text = $"{code} - {title} | HotelManagement";
+        _pageTitle.Text = title;
+        _footerText.Text = $"Đang mở: {title}     |     CSDL: Đã tích hợp";
+        Text = $"{title} | HotelManagement";
 
         var selected = MenuParents.TryGetValue(code, out var parent) ? parent : code;
         foreach (var item in _menuButtons)
@@ -155,7 +155,7 @@ public sealed class MainForm : Form
         header.Controls.Add(new Label
         {
             Dock = DockStyle.Fill,
-            Text = "HOTEL MANAGEMENT  |  HỆ THỐNG QUẢN LÝ KHÁCH SẠN",
+            Text = "HOTEL MANAGEMENT  |  HỆ THỐNG QUẢN LÝ KHÁCH SẠN  |  Nhân viên phụ trách ca: "    ,
             ForeColor = Color.White,
             TextAlign = ContentAlignment.MiddleLeft,
             Font = new Font("Segoe UI", 10, FontStyle.Bold),
@@ -169,18 +169,19 @@ public sealed class MainForm : Form
         var menu = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill, AutoScroll = true, FlowDirection = FlowDirection.TopDown,
-            WrapContents = false, BackColor = SidebarColor, Padding = new Padding(7, 5, 7, 5), Margin = Padding.Empty
+            WrapContents = false, BackColor = SidebarColor, Padding = new Padding(7, 5, 7, 7), Margin = Padding.Empty,
+            Font = new Font("Segoe UI", 11)
         };
         menu.Controls.Add(new Label { Text = "PHÂN HỆ NGHIỆP VỤ", Width = 210, Height = 15, ForeColor = Color.Silver, Font = new Font("Segoe UI", 9, FontStyle.Bold), Margin = new Padding(1, 0, 1, 3) });
-        AddGroup(menu, "1. TỔNG QUAN", ("S01", "S01 - Tổng quan và sơ đồ phòng"));
-        AddGroup(menu, "2. QUẢN LÝ PHÒNG", ("S05", "S05 - Danh sách phòng"));
-        AddGroup(menu, "3. KHÁCH HÀNG", ("S07", "S07 - Danh sách khách hàng"));
-        AddGroup(menu, "4. ĐẶT PHÒNG", ("S09", "S09 - Danh sách đặt phòng"));
-        AddGroup(menu, "5. LỄ TÂN", ("S11", "S11 - Nhận phòng (Check-in)"), ("S12", "S12 - Lưu trú đang diễn ra"));
-        AddGroup(menu, "6. DỊCH VỤ", ("S13", "S13 - Danh mục dịch vụ"));
-        AddGroup(menu, "7. HÓA ĐƠN", ("S17", "S17 - Danh sách hóa đơn"));
-        AddGroup(menu, "8. DỌN PHÒNG", ("S19", "S19 - Dọn phòng"));
-        AddGroup(menu, "9. BÁO CÁO", ("S20", "S20 - Báo cáo tháng"));
+        AddGroup(menu, "1. TỔNG QUAN", ("S01", "Tổng quan và sơ đồ phòng"));
+        AddGroup(menu, "2. QUẢN LÝ PHÒNG", ("S05", "Danh sách phòng"));
+        AddGroup(menu, "3. KHÁCH HÀNG", ("S07", "Danh sách khách hàng"));
+        AddGroup(menu, "4. ĐẶT PHÒNG", ("S09", "Danh sách đặt phòng"));
+        AddGroup(menu, "5. LỄ TÂN", ("S11", "Nhận phòng (Check-in)"), ("S12", "Lưu trú đang diễn ra"));
+        AddGroup(menu, "6. DỊCH VỤ", ("S13", "Danh mục dịch vụ"));
+        AddGroup(menu, "7. HÓA ĐƠN", ("S17", "Danh sách hóa đơn"));
+        AddGroup(menu, "8. DỌN PHÒNG", ("S19", "Dọn phòng"));
+        AddGroup(menu, "9. BÁO CÁO", ("S20", "Báo cáo tháng"));
         return menu;
     }
 
