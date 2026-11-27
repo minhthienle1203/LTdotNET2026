@@ -51,6 +51,12 @@ public sealed class ServiceUsageView : UserControl
         "ĐANG CUNG CẤP",
         "NGỪNG CUNG CẤP"
     };
+
+    private readonly LinkLabel navigateStayLink = new()
+    {
+        Text = "← Về trang lưu trú",
+        AutoSize = true,
+    };
     private ServiceItem? selectedService;
 
     public ServiceUsageView(Action<string, object?> navigate, HotelServiceService serviceServiceCatalog, StayServiceService stayServiceService)
@@ -138,6 +144,11 @@ private static string ToCategoryText(ServiceCategory category) => category switc
             AutoSize = true,
             Font = new Font("Segoe UI", 15, FontStyle.Bold),
         });
+        navigateStayLink.LinkClicked += (_, _) =>
+        {
+                navigate("S12", null);
+        };
+        panel.Controls.Add(navigateStayLink);
         panel.Controls.Add(targetStayLabel);
         return panel;
     }
