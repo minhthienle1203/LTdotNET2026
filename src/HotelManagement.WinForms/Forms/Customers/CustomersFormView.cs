@@ -14,7 +14,9 @@ public sealed record CustomerFormContext(
 public sealed class CustomerFormView : UserControl
 {
     private static readonly Color Navy = Color.FromArgb(27, 58, 101);
-    private static readonly Color Accent = Color.FromArgb(24, 102, 218);
+    private static readonly Color Accent = Color.FromArgb(150, 150, 150);
+    private static readonly Color ButtonBack = Color.FromArgb(225, 225, 225);
+    private static readonly Color ButtonText = Color.FromArgb(70, 70, 70);
     private static readonly Color Ok = Color.FromArgb(22, 140, 90);
     private static readonly Color Bad = Color.FromArgb(200, 40, 40);
     private static readonly Color Muted = Color.FromArgb(110, 122, 140);
@@ -113,11 +115,11 @@ public sealed class CustomerFormView : UserControl
         };
         if (_context is not null)
         {
-            var btnSource = CreateButton($"Quay lại {_context.ReturnTo} (Esc)", Accent, 250);
+            var btnSource = CreateButton($"Quay lại {_context.ReturnTo} (Esc)", 250);
             btnSource.Click += (_, _) => _navigate(_context.ReturnTo, null);
             buttons.Controls.Add(btnSource);
         }
-        var btnList = CreateButton("Danh sách khách hàng (S07)", Color.FromArgb(94, 109, 128), 220);
+        var btnList = CreateButton("Danh sách khách hàng (S07)", 220);
         btnList.Click += (_, _) => _navigate("S07", null);
         buttons.Controls.Add(btnList);
 
@@ -131,7 +133,7 @@ public sealed class CustomerFormView : UserControl
         var ctx = _context!;
         var banner = new Panel
         {
-            Dock = DockStyle.Fill, BackColor = Color.FromArgb(37, 99, 235),
+            Dock = DockStyle.Fill, BackColor = Accent,
             Padding = new Padding(14, 6, 14, 6), Margin = new Padding(0, 0, 0, 6)
         };
         string tx = string.IsNullOrEmpty(ctx.TransactionCode) ? "" : $" - Mã GD: {ctx.TransactionCode}";
@@ -198,25 +200,25 @@ public sealed class CustomerFormView : UserControl
             Height = 56, FlowDirection = FlowDirection.LeftToRight, WrapContents = false,
             BackColor = Color.White, Padding = new Padding(0, 10, 0, 0)
         };
-        var btnReset = CreateButton("Làm lại (F5)", Color.FromArgb(94, 109, 128), 120);
+        var btnReset = CreateButton("Làm lại (F5)", 120);
         btnReset.Click += (_, _) => ResetForm();
-        var btnCancel = CreateButton("Hủy bỏ (Esc)", Color.FromArgb(190, 60, 60), 120);
+        var btnCancel = CreateButton("Hủy bỏ (Esc)", 120);
         btnCancel.Click += (_, _) => Cancel();
         actions.Controls.Add(btnReset);
         actions.Controls.Add(btnCancel);
 
         if (_context is not null)
         {
-            var btnSaveOnly = CreateButton("Chỉ lưu hồ sơ", Color.FromArgb(20, 126, 110), 130);
+            var btnSaveOnly = CreateButton("Chỉ lưu hồ sơ", 130);
             btnSaveOnly.Click += (_, _) => Save(selectForReturn: false);
-            var btnSaveSelect = CreateButton($"Lưu & chọn cho {_context.ReturnTo} (F10)", Accent, 250);
+            var btnSaveSelect = CreateButton($"Lưu & chọn cho {_context.ReturnTo} (F10)", 250, primary: true);
             btnSaveSelect.Click += (_, _) => Save(selectForReturn: true);
             actions.Controls.Add(btnSaveOnly);
             actions.Controls.Add(btnSaveSelect);
         }
         else
         {
-            var btnSave = CreateButton("Lưu khách hàng (F10)", Accent, 190);
+            var btnSave = CreateButton("Lưu khách hàng (F10)", 190, primary: true);
             btnSave.Click += (_, _) => Save(selectForReturn: false);
             actions.Controls.Add(btnSave);
         }
@@ -561,17 +563,19 @@ public sealed class CustomerFormView : UserControl
         box.Controls.Add(head);
         return box;
     }
-
-    private static Button CreateButton(string text, Color color, int width)
+    private static Button CreateButton(string text, int width, bool primary = false)
     {
+        var back = primary ? Accent : ButtonBack;
         var button = new Button
         {
-            Text = text, Width = width, Height = 32, BackColor = color, ForeColor = Color.White,
+            Text = text, Width = width, Height = 32,
+            BackColor = back, ForeColor = primary ? Color.White : ButtonText,
             FlatStyle = FlatStyle.Flat, Font = new Font("Arial", 8, FontStyle.Bold), Cursor = Cursors.Hand,
             Margin = new Padding(3), UseVisualStyleBackColor = false
         };
-        button.FlatAppearance.BorderSize = 0;
-        button.FlatAppearance.MouseOverBackColor = ControlPaint.Light(color, 0.12f);
+        button.FlatAppearance.BorderSize = 1;
+        button.FlatAppearance.BorderColor = Accent;
+        button.FlatAppearance.MouseOverBackColor = ControlPaint.Light(back, 0.3f);
         return button;
     }
 }

@@ -9,6 +9,9 @@ namespace HotelManagement.WinForms.Forms.Customers;
 
 public sealed class CustomersListView : UserControl
 {
+    private static readonly Color Accent = Color.FromArgb(150, 150, 150);
+    private static readonly Color ButtonBack = Color.FromArgb(225, 225, 225);
+    private static readonly Color ButtonText = Color.FromArgb(70, 70, 70);
     private readonly Action<String,object?> _navigate;
     private readonly Func<string, IEnumerable<Customer>> _searchCustomers;
     private readonly TextBox _txtKeywords= new ();
@@ -127,11 +130,11 @@ public sealed class CustomersListView : UserControl
             Padding = new Padding(0, 2, 0, 0)
 
         };
-        var btnAdd = CreateButton("+Them khach hnag(F2)", Color.FromArgb(24, 102, 218));
+        var btnAdd = CreateButton("+Them khach hang(F2)", primary: true);
         btnAdd.Width = 158;
         btnAdd.Click += (_, _) => _navigate("S08", null);
 
-        var btnExport = CreateButton("xuat ex", Color.FromArgb(75, 91, 112));
+        var btnExport = CreateButton("xuat ex");
         btnExport.Width = 100;
         btnExport.Click +=(_,_)=> MessageBox.Show(this,"chuc nang xuat ex","Xuat du lieu",MessageBoxButtons.OK,MessageBoxIcon.Information);
         header.Controls.Add(titlePanel, 0, 0);
@@ -240,9 +243,9 @@ public sealed class CustomersListView : UserControl
             e.SuppressKeyPress = true;
         };
 
-        var btnSearch = CreateButton("tim kiem", Color.FromArgb(30, 91, 190));
+        var btnSearch = CreateButton("tim kiem", primary: true);
         btnSearch.Click += (_, _) => ReloadCustomers();
-        var btnReset = CreateButton("lam moi", Color.FromArgb(94, 109, 128));
+        var btnReset = CreateButton("lam moi");
         btnReset.Click += (_, _) =>
         {
             _txtKeywords.Clear();
@@ -355,10 +358,10 @@ public sealed class CustomersListView : UserControl
             BackColor = Color.White,
             Padding = new Padding(0, 5, 0, 0)
         };
-        var btnEdit = CreateButton("Sua ho so", Color.FromArgb(219, 145, 35));
+        var btnEdit = CreateButton("Sua ho so", primary: true);
         btnEdit.Width = 105;
         btnEdit.Click += (_, _) => EditSelectedCustomer();
-        var btnReservation = CreateButton("Tao dat phong", Color.FromArgb(20, 126, 110));
+        var btnReservation = CreateButton("Tao dat phong");
         btnReservation.Width = 125;
         btnReservation.Click += (_, _) => OpenReservation();
 
@@ -594,30 +597,27 @@ public sealed class CustomersListView : UserControl
         _navigate("S10", customer);
     }
 
-    private static Button CreateButton(string text, Color color)
+    private static Button CreateButton(string text, bool primary = false)
     {
+        var back = primary ? Accent : ButtonBack;
         var button = new Button
         {
             Text = text,
             Height = 32,
             MinimumSize = new Size(88, 32),
-            BackColor = color,
-            ForeColor = Color.White,
+            BackColor = back,
+            ForeColor = primary ? Color.White : ButtonText,
             FlatStyle = FlatStyle.Flat,
-            Font = new Font("Ariel", 8, FontStyle.Bold),
+            Font = new Font("Arial", 8, FontStyle.Bold),
             Cursor = Cursors.Hand,
             Margin = new Padding(3),
             Padding = new Padding(5, 0, 5, 0),
             UseVisualStyleBackColor = false
         };
 
-        button.FlatAppearance.BorderSize = 0;
-        button.FlatAppearance.MouseOverBackColor = ControlPaint.Light(color, 0.12f);
+        button.FlatAppearance.BorderSize = 1;
+        button.FlatAppearance.BorderColor = Accent;
+        button.FlatAppearance.MouseOverBackColor = ControlPaint.Light(back, 0.3f);
         return button;
     }
 }
-
-
-
-
-

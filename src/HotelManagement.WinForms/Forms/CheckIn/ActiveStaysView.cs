@@ -8,11 +8,11 @@ namespace HotelManagement.WinForms.Forms.CheckIn;
 
 public sealed class ActiveStaysView : UserControl
 {
-    private static readonly Color Navy = Color.FromArgb(17, 28, 49);
-    private static readonly Color Blue = Color.FromArgb(0, 74, 198);
-    private static readonly Color Pale = Color.FromArgb(236, 242, 252);
-    private static readonly Color Page = Color.FromArgb(246, 248, 252);
-    private static readonly Color Green = Color.FromArgb(22, 128, 61);
+    private static readonly Color Navy = Color.FromArgb(70, 70, 70);
+    private static readonly Color Accent = Color.FromArgb(150, 150, 150);
+    private static readonly Color Blue = Accent;
+    private static readonly Color Pale = Color.FromArgb(242, 242, 242);
+    private static readonly Color Page = Color.White;
     private static readonly Color Red = Color.FromArgb(185, 28, 28);
     private static readonly CultureInfo Vi = CultureInfo.GetCultureInfo("vi-VN");
 
@@ -51,9 +51,9 @@ public sealed class ActiveStaysView : UserControl
     private readonly RadioButton _rdoDay = new() { Text = "Theo ngày", Checked = true, AutoSize = true };
     private readonly RadioButton _rdoHour = new() { Text = "Theo giờ", AutoSize = true };
     private readonly Label _lblMoney = Info();
-    private readonly Label _lblDue = new() { AutoSize = true, Font = Bold(11), ForeColor = Blue, MaximumSize = new Size(350, 0) };
-    private readonly Button _btnService = BigButton("Ghi dịch vụ phát sinh (S15)  [F6]", Navy);
-    private readonly Button _btnCheckout = BigButton("Trả phòng && thanh toán (S16)  [F8]", Blue);
+    private readonly Label _lblDue = new() { AutoSize = true, Font = Bold(11), ForeColor = Navy, MaximumSize = new Size(350, 0) };
+    private readonly Button _btnService = BigButton("Ghi dịch vụ phát sinh ", Accent);
+    private readonly Button _btnCheckout = BigButton("Trả phòng && thanh toán ", Accent);
 
     private readonly System.Windows.Forms.Timer _timer = new() { Interval = 30_000 };
     public event EventHandler? CheckInRequested;
@@ -187,7 +187,7 @@ public sealed class ActiveStaysView : UserControl
         {
             new Label { Text = "CHI TIẾT LƯU TRÚ ĐANG CHỌN", AutoSize = true, Font = Bold(10) },
             _lblRoom, _lblStay,
-            new Label { Text = "Dịch vụ đã dùng trong đợt ở", AutoSize = true, Font = Bold(9), ForeColor = Blue },
+            new Label { Text = "Dịch vụ đã dùng trong đợt ở", AutoSize = true, Font = Bold(9), ForeColor = Navy },
             _lstServices,
             new Label { Text = "Tạm tính đến hiện tại", AutoSize = true, Font = Bold(9) },
             Flow(_rdoDay, _rdoHour), _lblMoney, _lblDue, _btnService, _btnCheckout
@@ -361,8 +361,8 @@ public sealed class ActiveStaysView : UserControl
     {
         var stay = Selected;
         _btnService.Enabled = _btnCheckout.Enabled = stay is not null;
-        _btnService.BackColor = stay is null ? Color.Silver : Navy;
-        _btnCheckout.BackColor = stay is null ? Color.Silver : Blue;
+        _btnService.BackColor = stay is null ? Color.Gainsboro : Accent;
+        _btnCheckout.BackColor = stay is null ? Color.Gainsboro : Accent;
         _lstServices.Items.Clear();
 
         if (stay is null || _data is null)
